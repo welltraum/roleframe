@@ -1,0 +1,232 @@
+{
+  "metadata": {
+    "name": "supervisor",
+    "language": "ru",
+    "source_files": [
+      "evals/files/sample-agents/agents/supervisor.md",
+      "evals/files/sample-agents/prompts/agents/supervisor.txt",
+      "evals/files/sample-agents/src/tools/factory.py"
+    ],
+    "reviewed_at": "2026-04-07"
+  },
+  "summary": {
+    "total_score": 12,
+    "maturity_level": "Рабочий прототип",
+    "verdict": "Supervisor держит на себе маршрутизацию и финальную сборку ответа. Из-за этого граница функции размыта и contracts не читаются как инженерный интерфейс. Главный риск возникает в связке free-form output, hidden dependency и implicit handoff.",
+    "top_deficit": "Смешивает routing и final answer без typed contracts."
+  },
+  "idef0": {
+    "input": "Агент принимает запрос пользователя по налоговой теме и различает кейсы с документами и без них. Тип входа не описан как схема.",
+    "control": "Prompt задаёт последовательность классификации, делегирования и финальной сборки ответа. Ограничения на честную деградацию и формат выхода не формализованы.",
+    "mechanism": "Во frontmatter объявлены toolkit `docs-search`, два sub-agent и retry middleware. Реальный toolset берётся из factory и не совпадает с текстом prompt.",
+    "output": "Выход описан как полезный свободный текст. Машинный success, empty, error и delegation contract отсутствуют."
+  },
+  "criteria": [
+    {
+      "key": "business_boundary",
+      "label": "Граница функции",
+      "score": 1,
+      "rationale": "Граница слишком широкая и объединяет orchestration с final answer.",
+      "evidence": [
+        "evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L9"
+      ]
+    },
+    {
+      "key": "input_definition",
+      "label": "Input",
+      "score": 1,
+      "rationale": "Классы входов угадываются по тексту, но не описаны как contract.",
+      "evidence": [
+        "evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L5"
+      ]
+    },
+    {
+      "key": "control_layer",
+      "label": "Control",
+      "score": 1,
+      "rationale": "Role и кусок SOP есть, но выходной контракт отсутствует.",
+      "evidence": [
+        "evals/files/sample-agents/agents/supervisor.md#L14-L16",
+        "evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9"
+      ]
+    },
+    {
+      "key": "mechanism_layer",
+      "label": "Mechanism",
+      "score": 1,
+      "rationale": "Prompt ссылается на tool, которого нет в объявленном toolkit.",
+      "evidence": [
+        "evals/files/sample-agents/prompts/agents/supervisor.txt#L6",
+        "evals/files/sample-agents/src/tools/factory.py#L1-L4"
+      ]
+    },
+    {
+      "key": "context_engineering",
+      "label": "Context engineering",
+      "score": 1,
+      "rationale": "Правила загрузки и сокращения контекста в prompt не зафиксированы.",
+      "evidence": [
+        "evals/files/sample-agents/prompts/agents/supervisor.txt#L1-L9"
+      ]
+    },
+    {
+      "key": "runtime_loop",
+      "label": "Runtime loop",
+      "score": 1,
+      "rationale": "Retry указан в metadata, но лимиты шагов и stop conditions не описаны.",
+      "evidence": [
+        "evals/files/sample-agents/agents/supervisor.md#L11-L13"
+      ]
+    },
+    {
+      "key": "evaluation",
+      "label": "Evaluation",
+      "score": 2,
+      "rationale": "Review fixture существует, но agent-level сценарии остаются частичными.",
+      "evidence": [
+        "evals/evals.json#L225-L239",
+        "evals/expected-findings.md#L7-L18"
+      ]
+    },
+    {
+      "key": "observability",
+      "label": "Observability",
+      "score": 1,
+      "rationale": "Следов маршрутизации и отказов в fixture нет как отдельных артефактов.",
+      "evidence": [
+        "evals/files/sample-agents/agents/supervisor.md#L1-L16"
+      ]
+    },
+    {
+      "key": "safety",
+      "label": "Safety",
+      "score": 1,
+      "rationale": "Prompt поощряет сглаживание пробелов вместо честного partial path.",
+      "evidence": [
+        "evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9"
+      ]
+    },
+    {
+      "key": "change_management",
+      "label": "Change management",
+      "score": 2,
+      "rationale": "Артефакты в git есть, но регрессионный цикл для prompt и routing не описан.",
+      "evidence": [
+        "evals/review-dashboard-runbook.md#L112-L119"
+      ]
+    }
+  ],
+  "evidence_points": [
+    {
+      "layer": "Control",
+      "source": "evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L5",
+      "claim": "Routing contract существует только как prose-правило без typed payload."
+    },
+    {
+      "layer": "Mechanism",
+      "source": "evals/files/sample-agents/prompts/agents/supervisor.txt#L6",
+      "claim": "Prompt разрешает `archive_search`, которого нет в declared toolkit."
+    },
+    {
+      "layer": "Mechanism",
+      "source": "evals/files/sample-agents/src/tools/factory.py#L1-L4",
+      "claim": "Factory подтверждает, что `docs-search` содержит только `search_documents` и `fetch_document`."
+    },
+    {
+      "layer": "Safety",
+      "source": "evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9",
+      "claim": "Финальный ответ разрешён в free text и допускает заполнение пробелов."
+    }
+  ],
+  "contracts": {
+    "consumer": "user + downstream review/dashboard tooling",
+    "current_contract": "Return a useful answer in free text.",
+    "target_contract": "{\n  \"status\": \"success | empty | error | delegation\",\n  \"selected_agent\": \"document-finder | response-drafter | null\",\n  \"payload\": {},\n  \"reason\": \"string\"\n}"
+  },
+  "anti_patterns": [
+    {
+      "tag": "AP-14 Hidden dependency",
+      "explanation": "Prompt требует capability вне declared toolkit."
+    },
+    {
+      "tag": "Implicit routing contract",
+      "explanation": "Handoff между агентами не описан машинно."
+    },
+    {
+      "tag": "Free-form output",
+      "explanation": "Итоговый ответ не имеет strict schema."
+    },
+    {
+      "tag": "Safety risk",
+      "explanation": "Prompt разрешает сглаживание недостающих данных."
+    }
+  ],
+  "backlog": [
+    {
+      "priority": "P1",
+      "layer": "Control",
+      "risk": "Breaking",
+      "action": "Ввести typed output contract для success / empty / error / delegation.",
+      "file_ref": "evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9"
+    },
+    {
+      "priority": "P1",
+      "layer": "Mechanism",
+      "risk": "Behavioural",
+      "action": "Убрать `archive_search` из prompt или объявить capability в toolkit и factory.",
+      "file_ref": "evals/files/sample-agents/prompts/agents/supervisor.txt#L6"
+    },
+    {
+      "priority": "P1",
+      "layer": "Architecture",
+      "risk": "Breaking",
+      "action": "Разделить routing и final response по разным функциям или жёстко типизировать handoff.",
+      "file_ref": "evals/files/sample-agents/agents/supervisor.md#L2-L16"
+    },
+    {
+      "priority": "P2",
+      "layer": "Runtime",
+      "risk": "Safe",
+      "action": "Добавить step limit, honest stop policy и telemetry по выбранному маршруту.",
+      "file_ref": "evals/files/sample-agents/agents/supervisor.md#L11-L13"
+    }
+  ],
+  "patch_plan": [
+    {
+      "title": "Ввести строгий выходной контракт",
+      "target": "evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9",
+      "patch_type": "schema",
+      "risk": "Breaking",
+      "draft": "{\n  \"status\": \"success | empty | error | delegation\",\n  \"selected_agent\": \"document-finder | response-drafter | null\",\n  \"payload\": {},\n  \"reason\": \"string\"\n}",
+      "verification": [
+        "Смоделировать happy-path с каждым подагентом.",
+        "Проверить empty и tool-error пути.",
+        "Убедиться, что выход можно разобрать без эвристик."
+      ]
+    },
+    {
+      "title": "Убрать скрытую зависимость",
+      "target": "evals/files/sample-agents/prompts/agents/supervisor.txt#L6",
+      "patch_type": "prompt",
+      "risk": "Behavioural",
+      "draft": "Use only the tools declared in the assigned toolkit. If a required capability is missing, return status=\"error\" with the missing capability name.",
+      "verification": [
+        "Проверить, что prompt больше не упоминает `archive_search`.",
+        "Сверить prompt c `src/tools/factory.py`.",
+        "Убедиться, что review больше не ловит hidden dependency."
+      ]
+    },
+    {
+      "title": "Сузить границу функции supervisor",
+      "target": "evals/files/sample-agents/agents/supervisor.md#L2-L16",
+      "patch_type": "prompt",
+      "risk": "Breaking",
+      "draft": "Your only job is to classify the request and delegate it with a typed payload. Do not compose the final answer yourself.",
+      "verification": [
+        "Проверить, что final answer остаётся только у response-drafter.",
+        "Проверить, что supervisor возвращает route decision, а не prose response.",
+        "Обновить contract matrix и негативные eval-кейсы."
+      ]
+    }
+  ]
+}

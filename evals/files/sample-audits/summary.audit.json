@@ -1,0 +1,153 @@
+{
+  "language": "ru",
+  "title": "Dashboard аудита fixture-агентов",
+  "subtitle": "Structured audit package для evals/files/sample-audits",
+  "overall_verdict": "Fixture хорошо подходит для демонстрации evidence-driven review, но основная архитектурная слабость остаётся прежней: handoff и output живут как prose-контракты. JSON-first пакет убирает дублирование и позволяет делать плотный dashboard без повторного пересказа markdown.",
+  "overview_cards": [
+    {
+      "title": "Общий вердикт",
+      "value": "Прототип",
+      "description": "Аудит теперь собирается из structured source of truth, а не из двух независимых prose-артефактов."
+    },
+    {
+      "title": "Средний балл",
+      "value": "15.3/30",
+      "description": "Самые слабые места лежат в contracts, safety и runtime policies."
+    },
+    {
+      "title": "Канонические findings",
+      "value": "8 из 8",
+      "description": "Fixture покрывает все ключевые baseline-категории для review."
+    },
+    {
+      "title": "Главный системный риск",
+      "value": "Текстовый orchestration",
+      "description": "Почти все межагентные связи остаются implicit, пока contracts не типизированы."
+    }
+  ],
+  "canonical_findings": {
+    "matched": 8,
+    "total": 8,
+    "categories": [
+      "supervisor_scope_too_broad",
+      "routing_contract_is_implicit",
+      "output_contract_is_missing",
+      "hidden_or_weak_tool_assumptions",
+      "tool_failure_strategy_is_weak",
+      "handoff_payload_is_untyped",
+      "unsafe_completion_behavior_exists",
+      "eval_and_ops_gaps_remain"
+    ]
+  },
+  "architecture": {
+    "heading": "Архитектурная схема",
+    "text": "Supervisor управляет двумя подагентами, но почти все связи описаны текстом, а не typed payload. Именно поэтому contracts и safety доминируют над tool-level вопросами.",
+    "mermaid": "flowchart LR\n    U[\"Пользовательский запрос\"] --> S[\"Supervisor\"]\n    S -->|\"implicit handoff\"| D[\"Document-finder\"]\n    S -->|\"implicit handoff\"| R[\"Response-drafter\"]\n    D -->|\"prose documents\"| S\n    R -->|\"free-form draft\"| S\n    S -->|\"free text\"| U"
+  },
+  "critical_issues": [
+    "Supervisor смешивает routing и final answer, поэтому граница функции ломается первой.",
+    "Document-finder не имеет typed handoff и детерминированной failure policy.",
+    "Response-drafter unsafe-by-design, потому что prompt разрешает достраивать факты.",
+    "Eval и observability существуют только на уровне fixture review, а не как per-agent contracts."
+  ],
+  "maturity_matrix": {
+    "columns": [
+      "agent",
+      "boundary",
+      "control",
+      "mechanism",
+      "eval",
+      "safety",
+      "total"
+    ],
+    "rows": [
+      {
+        "agent": "supervisor",
+        "values": [1, 1, 1, 2, 1, 12]
+      },
+      {
+        "agent": "document-finder",
+        "values": [3, 2, 2, 2, 2, 18]
+      },
+      {
+        "agent": "response-drafter",
+        "values": [2, 1, 2, 2, 1, 16]
+      }
+    ]
+  },
+  "contract_matrix": {
+    "columns": [
+      "supervisor",
+      "document-finder",
+      "response-drafter",
+      "user"
+    ],
+    "rows": [
+      {
+        "agent": "supervisor",
+        "cells": [
+          {"status": "n/a", "note": "self"},
+          {"status": "implicit", "note": "handoff есть, payload не типизирован"},
+          {"status": "implicit", "note": "route decision задан прозой"},
+          {"status": "implicit", "note": "ответ уходит free text"}
+        ]
+      },
+      {
+        "agent": "document-finder",
+        "cells": [
+          {"status": "implicit", "note": "возврат документов идёт prose-ответом supervisor-у"},
+          {"status": "n/a", "note": "self"},
+          {"status": "absent", "note": "прямого контракта на response-drafter нет"},
+          {"status": "n/a", "note": "напрямую пользователю не отвечает"}
+        ]
+      },
+      {
+        "agent": "response-drafter",
+        "cells": [
+          {"status": "implicit", "note": "формат входа от supervisor не описан схемой"},
+          {"status": "absent", "note": "прямого handoff с document-finder нет"},
+          {"status": "n/a", "note": "self"},
+          {"status": "implicit", "note": "итог свободный и невалидируемый"}
+        ]
+      }
+    ]
+  },
+  "roadmap": [
+    {
+      "title": "Фаза 1. Function + contract",
+      "description": "Разделить routing и final assembly, затем ввести typed contracts на каждом межагентном стыке."
+    },
+    {
+      "title": "Фаза 2. Runtime + safety",
+      "description": "Добавить bounded retry, timeout, refusal и partial paths там, где сейчас есть только prose-эвристики."
+    },
+    {
+      "title": "Фаза 3. Eval + observability",
+      "description": "Закрыть agent-level regressions, telemetry по маршрутам и сигналы на unsafe completion."
+    }
+  ],
+  "agents_lead": "Карточки ниже должны быть самодостаточными: в них уже есть verdict, IDEF0, evidence, 10 критериев, contracts, backlog и top-3 patch plan без необходимости открывать markdown.",
+  "methodology": {
+    "heading": "Методология",
+    "lead": "Подробная методология вынесена в отдельные документы, а dashboard оставляет только краткую карту чтения. Это сокращает токены и не заставляет модель пересказывать одно и то же в каждом агенте.",
+    "summary_blocks": [
+      {
+        "title": "Что покрывает методология",
+        "items": [
+          "почему агент не равен просто LLM",
+          "как разделяются Control и Mechanism",
+          "зачем агент проектируется как одна бизнес-функция",
+          "почему typed contracts важнее красивого prose"
+        ]
+      },
+      {
+        "title": "Как читать этот пакет",
+        "items": [
+          "сначала overview для pattern-level картины",
+          "затем agent cards для плотного среза по каждому агенту",
+          "потом markdown audit, если нужен подробный patch plan"
+        ]
+      }
+    ]
+  }
+}

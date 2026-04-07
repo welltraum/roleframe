@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard аудита fixture-агентов</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --panel: rgba(255,252,247,.94);
+      --line: #e8ddcf;
+      --ink: #1f2937;
+      --muted: #667085;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --warn: #b54708;
+      --good: #027a48;
+    }
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: radial-gradient(circle at top right, #efe7d8 0%, #f7f4ee 38%, #f3efe6 100%);
+      color: var(--ink);
+    }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(77, 57, 34, 0.06);
+    }
+    .tab-active { background: #0f766e; color: #fff; }
+    .tab-inactive { background: #ece4d8; color: #475467; }
+    .tab-inactive:hover { background: #e2d7c8; }
+    .badge-danger { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+    .badge-warn { background: #fffaeb; color: var(--warn); border: 1px solid #fedf89; }
+    .badge-good { background: #ecfdf3; color: var(--good); border: 1px solid #abefc6; }
+    .chip { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+    .chip-danger { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+    .chip-warn { background: #fffaeb; color: var(--warn); border: 1px solid #fedf89; }
+    .chip-good { background: #ecfdf3; color: var(--good); border: 1px solid #abefc6; }
+    .chip-neutral { background: #f2f4f7; color: #475467; border: 1px solid #d0d5dd; }
+    .score-bar { transition: width .45s ease; }
+    .mermaid { background: transparent !important; }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    .data-table td, .data-table th {
+      padding: 8px 10px;
+      border-bottom: 1px solid #ebe3d7;
+      vertical-align: top;
+    }
+    .data-table th {
+      color: #475467;
+      font-size: 12px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .data-table td {
+      font-size: 13px;
+    }
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef7f6;
+      color: #115e59;
+      border: 1px solid #cfe9e6;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .section-lead {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 74ch;
+    }
+    .subpanel {
+      border: 1px solid #ebe3d7;
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .code-frame {
+      border-radius: 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    [data-agent-card] {
+      scroll-margin-top: 96px;
+    }
+    [data-block="criteria"] th,
+    [data-block="backlog"] th {
+      white-space: nowrap;
+    }
+    [data-block="patch-plan-item"] pre {
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-50 border-b border-[var(--line)] backdrop-blur bg-[rgba(247,244,238,0.9)]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Dashboard аудита fixture-агентов</h1>
+        <p class="text-sm text-slate-500">Structured audit package для evals/files/sample-audits</p>
+      </div>
+      <nav class="flex gap-2 flex-wrap">
+        <button id="btn-overview" onclick="showView('overview')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-active">Обзор</button>
+        <button id="btn-methodology" onclick="showView('methodology')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Методика</button>
+        <button id="btn-agents" onclick="showView('agents')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Агенты</button>
+        <button id="btn-issues" onclick="showView('issues')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Проблемы и план</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section id="view-overview" class="view space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Общий вердикт</div><div class="text-3xl font-extrabold">Прототип</div><div class="text-sm text-slate-500 mt-2">Аудит теперь собирается из structured source of truth, а не из двух независимых prose-артефактов.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Средний балл</div><div class="text-3xl font-extrabold">15.3/30</div><div class="text-sm text-slate-500 mt-2">Самые слабые места лежат в contracts, safety и runtime policies.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Канонические findings</div><div class="text-3xl font-extrabold">8 из 8</div><div class="text-sm text-slate-500 mt-2">Fixture покрывает все ключевые baseline-категории для review.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Главный системный риск</div><div class="text-3xl font-extrabold">Текстовый orchestration</div><div class="text-sm text-slate-500 mt-2">Почти все межагентные связи остаются implicit, пока contracts не типизированы.</div></div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-2">Архитектурная схема</h2>
+        <p class="text-sm text-slate-500 mb-4">Supervisor управляет двумя подагентами, но почти все связи описаны текстом, а не typed payload. Именно поэтому contracts и safety доминируют над tool-level вопросами.</p>
+        <div class="mermaid">flowchart LR
+    U["Пользовательский запрос"] --> S["Supervisor"]
+    S -->|"implicit handoff"| D["Document-finder"]
+    S -->|"implicit handoff"| R["Response-drafter"]
+    D -->|"prose documents"| S
+    R -->|"free-form draft"| S
+    S -->|"free text"| U</div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-5">Баллы зрелости</h2>
+        <div class="space-y-5">
+          <div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">supervisor</span><span>12/30, Рабочий прототип</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-rose-500 score-bar" style="width:40%"></div></div><div class="text-xs text-slate-500 mt-1">Смешивает routing и final answer без typed contracts.</div></div>
+<div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">document-finder</span><span>18/30, Рабочий прототип</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-amber-500 score-bar" style="width:60%"></div></div><div class="text-xs text-slate-500 mt-1">Нет typed handoff и формальной failure policy.</div></div>
+<div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">response-drafter</span><span>16/30, Рабочий прототип</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-amber-500 score-bar" style="width:53%"></div></div><div class="text-xs text-slate-500 mt-1">Prompt поощряет домысливание и не даёт честного partial path.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-methodology" class="view hidden space-y-6">
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-2">Методология</h2>
+        <p class="text-sm text-slate-500 mb-5">Подробная методология вынесена в отдельные документы, а dashboard оставляет только краткую карту чтения. Это сокращает токены и не заставляет модель пересказывать одно и то же в каждом агенте.</p>
+        <div class="flex flex-wrap gap-3 mb-5">
+          <a class="link-pill" href="../../../docs/methodology.ru.md">Открыть методологию, RU</a>
+<a class="link-pill" href="../../../docs/methodology.en.md">Открыть методологию, EN</a>
+<a class="link-pill" href="README.md">Открыть сводку аудита</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><div class="font-semibold mb-2">Что покрывает методология</div><ul class="list-disc pl-5 space-y-1"><li>почему агент не равен просто LLM</li><li>как разделяются Control и Mechanism</li><li>зачем агент проектируется как одна бизнес-функция</li><li>почему typed contracts важнее красивого prose</li></ul></div>
+<div class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><div class="font-semibold mb-2">Как читать этот пакет</div><ul class="list-disc pl-5 space-y-1"><li>сначала overview для pattern-level картины</li><li>затем agent cards для плотного среза по каждому агенту</li><li>потом markdown audit, если нужен подробный patch plan</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-agents" class="view hidden space-y-5">
+      <div class="panel rounded-3xl p-5" data-block="agents-lead"><p class="text-sm text-slate-600">Карточки ниже должны быть самодостаточными: в них уже есть verdict, IDEF0, evidence, 10 критериев, contracts, backlog и top-3 patch plan без необходимости открывать markdown.</p></div>
+<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="supervisor"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">supervisor</h2><p class="text-sm text-slate-500">Смешивает routing и final answer без typed contracts.</p></div><div class="flex items-center gap-2"><span class="badge-danger rounded-full px-3 py-1 text-sm font-bold">12/30</span><span class="chip chip-danger">Рабочий прототип</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="01_supervisor.md">Полный audit</a><a class="link-pill" href="../sample-agents/agents/supervisor.md">supervisor.md</a><a class="link-pill" href="../sample-agents/prompts/agents/supervisor.txt">supervisor.txt</a><a class="link-pill" href="../sample-agents/src/tools/factory.py">factory.py</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Краткий вердикт</div><p class="text-sm">Supervisor держит на себе маршрутизацию и финальную сборку ответа. Из-за этого граница функции размыта и contracts не читаются как инженерный интерфейс. Главный риск возникает в связке free-form output, hidden dependency и implicit handoff.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> Агент принимает запрос пользователя по налоговой теме и различает кейсы с документами и без них. Тип входа не описан как схема.</div><div><strong>Control:</strong> Prompt задаёт последовательность классификации, делегирования и финальной сборки ответа. Ограничения на честную деградацию и формат выхода не формализованы.</div><div><strong>Mechanism:</strong> Во frontmatter объявлены toolkit `docs-search`, два sub-agent и retry middleware. Реальный toolset берётся из factory и не совпадает с текстом prompt.</div><div><strong>Output:</strong> Выход описан как полезный свободный текст. Машинный success, empty, error и delegation contract отсутствуют.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evidence"><div class="font-semibold mb-3">Ключевые точки доказательства</div><ul class="list-disc pl-5 space-y-2 text-sm"><li><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L5</span>, Routing contract существует только как prose-правило без typed payload.</li>
+<li><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L6</span>, Prompt разрешает `archive_search`, которого нет в declared toolkit.</li>
+<li><span class="mono">evals/files/sample-agents/src/tools/factory.py#L1-L4</span>, Factory подтверждает, что `docs-search` содержит только `search_documents` и `fetch_document`.</li>
+<li><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</span>, Финальный ответ разрешён в free text и допускает заполнение пробелов.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="criteria"><div class="font-semibold mb-3">Критерии зрелости</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Критерий</th><th>Балл</th><th>Почему</th><th>Доказательства</th></tr></thead><tbody><tr><td>Граница функции</td><td>1</td><td>Граница слишком широкая и объединяет orchestration с final answer.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L9</td></tr>
+<tr><td>Input</td><td>1</td><td>Классы входов угадываются по тексту, но не описаны как contract.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L5</td></tr>
+<tr><td>Control</td><td>1</td><td>Role и кусок SOP есть, но выходной контракт отсутствует.</td><td>evals/files/sample-agents/agents/supervisor.md#L14-L16, evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</td></tr>
+<tr><td>Mechanism</td><td>1</td><td>Prompt ссылается на tool, которого нет в объявленном toolkit.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L6, evals/files/sample-agents/src/tools/factory.py#L1-L4</td></tr>
+<tr><td>Context engineering</td><td>1</td><td>Правила загрузки и сокращения контекста в prompt не зафиксированы.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L1-L9</td></tr>
+<tr><td>Runtime loop</td><td>1</td><td>Retry указан в metadata, но лимиты шагов и stop conditions не описаны.</td><td>evals/files/sample-agents/agents/supervisor.md#L11-L13</td></tr>
+<tr><td>Evaluation</td><td>2</td><td>Review fixture существует, но agent-level сценарии остаются частичными.</td><td>evals/evals.json#L225-L239, evals/expected-findings.md#L7-L18</td></tr>
+<tr><td>Observability</td><td>1</td><td>Следов маршрутизации и отказов в fixture нет как отдельных артефактов.</td><td>evals/files/sample-agents/agents/supervisor.md#L1-L16</td></tr>
+<tr><td>Safety</td><td>1</td><td>Prompt поощряет сглаживание пробелов вместо честного partial path.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</td></tr>
+<tr><td>Change management</td><td>2</td><td>Артефакты в git есть, но регрессионный цикл для prompt и routing не описан.</td><td>evals/review-dashboard-runbook.md#L112-L119</td></tr></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Текущий контракт</div><div class="text-xs text-slate-500 mb-2">Потребитель: <span class="mono">user + downstream review/dashboard tooling</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Return a useful answer in free text.</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Целевой контракт</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error | delegation&quot;,
+  &quot;selected_agent&quot;: &quot;document-finder | response-drafter | null&quot;,
+  &quot;payload&quot;: {},
+  &quot;reason&quot;: &quot;string&quot;
+}</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="anti-patterns"><div class="font-semibold mb-2">Анти-паттерны и системные риски</div><div class="flex flex-wrap gap-2"><span class="chip chip-neutral" title="Prompt требует capability вне declared toolkit.">AP-14 Hidden dependency</span>
+<span class="chip chip-neutral" title="Handoff между агентами не описан машинно.">Implicit routing contract</span>
+<span class="chip chip-neutral" title="Итоговый ответ не имеет strict schema.">Free-form output</span>
+<span class="chip chip-neutral" title="Prompt разрешает сглаживание недостающих данных.">Safety risk</span></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="backlog"><div class="font-semibold mb-3">Бэклог</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Действие</th><th>Слой</th><th>Риск</th><th>Точка</th></tr></thead><tbody><tr><td>Ввести typed output contract для success / empty / error / delegation.</td><td>Control</td><td><span class="chip chip-danger">Breaking</span></td><td><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</span></td></tr>
+<tr><td>Убрать `archive_search` из prompt или объявить capability в toolkit и factory.</td><td>Mechanism</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L6</span></td></tr>
+<tr><td>Разделить routing и final response по разным функциям или жёстко типизировать handoff.</td><td>Architecture</td><td><span class="chip chip-danger">Breaking</span></td><td><span class="mono">evals/files/sample-agents/agents/supervisor.md#L2-L16</span></td></tr>
+<tr><td>Добавить step limit, honest stop policy и telemetry по выбранному маршруту.</td><td>Runtime</td><td><span class="chip chip-good">Safe</span></td><td><span class="mono">evals/files/sample-agents/agents/supervisor.md#L11-L13</span></td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan"><div class="font-semibold mb-3">План патчей, топ-3</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Ввести строгий выходной контракт</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</span> · schema · Breaking</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error | delegation&quot;,
+  &quot;selected_agent&quot;: &quot;document-finder | response-drafter | null&quot;,
+  &quot;payload&quot;: {},
+  &quot;reason&quot;: &quot;string&quot;
+}</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Смоделировать happy-path с каждым подагентом.</li><li>Проверить empty и tool-error пути.</li><li>Убедиться, что выход можно разобрать без эвристик.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Убрать скрытую зависимость</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L6</span> · prompt · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Use only the tools declared in the assigned toolkit. If a required capability is missing, return status=&quot;error&quot; with the missing capability name.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить, что prompt больше не упоминает `archive_search`.</li><li>Сверить prompt c `src/tools/factory.py`.</li><li>Убедиться, что review больше не ловит hidden dependency.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Сузить границу функции supervisor</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/supervisor.md#L2-L16</span> · prompt · Breaking</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Your only job is to classify the request and delegate it with a typed payload. Do not compose the final answer yourself.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить, что final answer остаётся только у response-drafter.</li><li>Проверить, что supervisor возвращает route decision, а не prose response.</li><li>Обновить contract matrix и негативные eval-кейсы.</li></ul></div></div></div></article>
+<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="document-finder"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">document-finder</h2><p class="text-sm text-slate-500">Нет typed handoff и формальной failure policy.</p></div><div class="flex items-center gap-2"><span class="badge-warn rounded-full px-3 py-1 text-sm font-bold">18/30</span><span class="chip chip-danger">Рабочий прототип</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="02_document-finder.md">Полный audit</a><a class="link-pill" href="../sample-agents/agents/document-finder.md">document-finder.md</a><a class="link-pill" href="../sample-agents/src/tools/factory.py">factory.py</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Краткий вердикт</div><p class="text-sm">Document-finder уже близок к атомарной бизнес-функции. Главные пробелы сосредоточены не в назначении агента, а в handoff и failure policy. Пока результат годится для прототипа, но не для надёжного multi-agent контракта.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> Агент получает запрос на поиск документов от supervisor. Формат входа ожидается текстом, а не схемой.</div><div><strong>Control:</strong> Prompt требует найти релевантные документы и сообщить о пустом результате. Правила retry и handoff описаны эвристически.</div><div><strong>Mechanism:</strong> Toolkit `docs-search` даёт search и fetch capabilities. Runtime policy на timeout, retry count и budget не зафиксирована.</div><div><strong>Output:</strong> Агент возвращает лучшие документы или сообщение об отсутствии результата. Машинный payload со status и bounded result set не задан.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evidence"><div class="font-semibold mb-3">Ключевые точки доказательства</div><ul class="list-disc pl-5 space-y-2 text-sm"><li><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span>, Happy path описан, но handoff прямо разрешён без fixed schema.</li>
+<li><span class="mono">evals/files/sample-agents/agents/document-finder.md#L12</span>, Retry задан формулой “if it feels worth it”, а не проверяемой политикой.</li>
+<li><span class="mono">evals/files/sample-agents/src/tools/factory.py#L1-L4</span>, Toolkit подтверждает, что у агента достаточно tools для функции поиска.</li>
+<li><span class="mono">evals/files/sample-agents/agents/document-finder.md#L13-L14</span>, Empty result и success path существуют только как prose response supervisor-у.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="criteria"><div class="font-semibold mb-3">Критерии зрелости</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Критерий</th><th>Балл</th><th>Почему</th><th>Доказательства</th></tr></thead><tbody><tr><td>Граница функции</td><td>3</td><td>Функция поиска документов выделена отдельно и читается однозначно.</td><td>evals/files/sample-agents/agents/document-finder.md#L9-L11</td></tr>
+<tr><td>Input</td><td>2</td><td>Вход понятен по роли агента, но не оформлен как typed schema.</td><td>evals/files/sample-agents/agents/document-finder.md#L9-L11</td></tr>
+<tr><td>Control</td><td>2</td><td>Happy path понятен, но contract для failure и handoff остаётся неполным.</td><td>evals/files/sample-agents/agents/document-finder.md#L11-L14</td></tr>
+<tr><td>Mechanism</td><td>2</td><td>Toolkit соответствует назначению, но execution policy не доведена до runtime contract.</td><td>evals/files/sample-agents/agents/document-finder.md#L5-L7, evals/files/sample-agents/src/tools/factory.py#L1-L4</td></tr>
+<tr><td>Context engineering</td><td>1</td><td>Правила сокращения выдачи и budget на payload не заданы.</td><td>evals/files/sample-agents/agents/document-finder.md#L11-L14</td></tr>
+<tr><td>Runtime loop</td><td>1</td><td>Retry описан как эвристика и не содержит timeout или give-up policy.</td><td>evals/files/sample-agents/agents/document-finder.md#L12</td></tr>
+<tr><td>Evaluation</td><td>2</td><td>Fixture review существует, но отдельные негативные сценарии агента не выделены.</td><td>evals/evals.json#L225-L239, evals/expected-findings.md#L10-L14</td></tr>
+<tr><td>Observability</td><td>1</td><td>Signals для empty result и retry count не оформлены как operations artifacts.</td><td>evals/files/sample-agents/agents/document-finder.md#L1-L14</td></tr>
+<tr><td>Safety</td><td>2</td><td>Агент не обещает лишнего, но tool-failure path всё ещё слаб.</td><td>evals/files/sample-agents/agents/document-finder.md#L12-L14</td></tr>
+<tr><td>Change management</td><td>2</td><td>Версионность есть, но change cycle не закрыт негативными regression checks.</td><td>evals/review-dashboard-runbook.md#L112-L119</td></tr></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Текущий контракт</div><div class="text-xs text-slate-500 mb-2">Потребитель: <span class="mono">supervisor</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Return the best documents in free text. If nothing is found, tell the supervisor that nothing is available.</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Целевой контракт</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error&quot;,
+  &quot;documents&quot;: [{&quot;id&quot;: &quot;string&quot;, &quot;title&quot;: &quot;string&quot;, &quot;relevance&quot;: 0.0}],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="anti-patterns"><div class="font-semibold mb-2">Анти-паттерны и системные риски</div><div class="flex flex-wrap gap-2"><span class="chip chip-neutral" title="Supervisor не получает machine-readable payload.">Untyped handoff</span>
+<span class="chip chip-neutral" title="Timeout, retry count и give-up rules отсутствуют.">Weak failure policy</span>
+<span class="chip chip-neutral" title="Размер возвращаемого набора документов никак не ограничен.">Budget risk</span></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="backlog"><div class="font-semibold mb-3">Бэклог</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Действие</th><th>Слой</th><th>Риск</th><th>Точка</th></tr></thead><tbody><tr><td>Ввести typed handoff payload со status, documents и reason.</td><td>Control</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span></td></tr>
+<tr><td>Формализовать retry, timeout и give-up policy.</td><td>Runtime</td><td><span class="chip chip-good">Safe</span></td><td><span class="mono">evals/files/sample-agents/agents/document-finder.md#L12</span></td></tr>
+<tr><td>Ограничить размер payload и число возвращаемых документов.</td><td>Context</td><td><span class="chip chip-good">Safe</span></td><td><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span></td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan"><div class="font-semibold mb-3">План патчей, топ-3</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Typed handoff для найденных документов</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span> · schema · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error&quot;,
+  &quot;documents&quot;: [{&quot;id&quot;: &quot;string&quot;, &quot;title&quot;: &quot;string&quot;, &quot;relevance&quot;: 0.0}],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить happy path с 1-3 документами.</li><li>Проверить empty path без найденных документов.</li><li>Проверить, что supervisor может разобрать payload без эвристики.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Failure policy вместо эвристического retry</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/document-finder.md#L12</span> · runtime · Safe</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">If the tool fails, retry once. If the second attempt fails or times out, return status=&quot;error&quot; and include the failure reason.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Смоделировать timeout и убедиться, что агент возвращает status=error.</li><li>Проверить, что число retry не превышает один.</li><li>Проверить, что текст prompt больше не использует эвристику feel-worth-it.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Budget rule для результата поиска</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span> · prompt · Safe</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Return at most 3 documents. Pass ids, titles, and short evidence snippets instead of full document bodies.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить, что handoff не разрастается при большом количестве совпадений.</li><li>Проверить, что relevance и ids сохраняются.</li><li>Проверить, что response-drafter получает достаточно данных без context stuffing.</li></ul></div></div></div></article>
+<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="response-drafter"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">response-drafter</h2><p class="text-sm text-slate-500">Prompt поощряет домысливание и не даёт честного partial path.</p></div><div class="flex items-center gap-2"><span class="badge-warn rounded-full px-3 py-1 text-sm font-bold">16/30</span><span class="chip chip-danger">Рабочий прототип</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="03_response-drafter.md">Полный audit</a><a class="link-pill" href="../sample-agents/agents/response-drafter.md">response-drafter.md</a><a class="link-pill" href="../sample-agents/src/tools/factory.py">factory.py</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Краткий вердикт</div><p class="text-sm">Response-drafter выделен как отдельная функция и не смешивается с поиском документов. Главная проблема сосредоточена в Control: prompt мотивирует сделать ответ полным даже на неполных данных. Для налогового сценария это делает agent unsafe-by-design.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> Агент принимает документы и подтверждённые факты от других агентов. Формат входа подразумевается, но не описан как schema.</div><div><strong>Control:</strong> Prompt требует написать полный ответ и заполнить пробелы из контекста. Ограничения на источники правды и честный refusal path отсутствуют.</div><div><strong>Mechanism:</strong> Toolkit `drafting` минимален и соответствует задаче форматирования ответа. Риск создаётся не инструментами, а policy prompt-а.</div><div><strong>Output:</strong> Выход — гибкий естественный текст без strict schema. Status для partial, empty и error path не определён.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evidence"><div class="font-semibold mb-3">Ключевые точки доказательства</div><ul class="list-disc pl-5 space-y-2 text-sm"><li><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11</span>, Prompt разрешает заполнять пробелы из контекста, а не только из подтверждённых фактов.</li>
+<li><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L12</span>, Строгая схема результата не требуется и это делает downstream parsing хрупким.</li>
+<li><span class="mono">evals/files/sample-agents/src/tools/factory.py#L3</span>, Toolkit сам по себе не создаёт риск, значит проблема локализована в Control.</li>
+<li><span class="mono">evals/expected-findings.md#L13-L18</span>, Baseline review прямо ожидает finding про unsafe completion behavior.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="criteria"><div class="font-semibold mb-3">Критерии зрелости</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Критерий</th><th>Балл</th><th>Почему</th><th>Доказательства</th></tr></thead><tbody><tr><td>Граница функции</td><td>2</td><td>Функция финальной сборки ответа отделена от поиска и маршрутизации.</td><td>evals/files/sample-agents/agents/response-drafter.md#L9-L10</td></tr>
+<tr><td>Input</td><td>2</td><td>Вход от других агентов понятен по роли, но не зафиксирован как structured handoff.</td><td>evals/files/sample-agents/agents/response-drafter.md#L9-L12</td></tr>
+<tr><td>Control</td><td>1</td><td>Prompt описывает цель, но не ставит guardrails против выдумывания фактов.</td><td>evals/files/sample-agents/agents/response-drafter.md#L11-L12</td></tr>
+<tr><td>Mechanism</td><td>2</td><td>Toolkit минимален и уместен для задачи финальной сборки ответа.</td><td>evals/files/sample-agents/agents/response-drafter.md#L5-L7, evals/files/sample-agents/src/tools/factory.py#L1-L4</td></tr>
+<tr><td>Context engineering</td><td>1</td><td>Источник правды не отделён от вспомогательного контекста и это оставляет свободную зону для галлюцинации.</td><td>evals/files/sample-agents/agents/response-drafter.md#L11-L12</td></tr>
+<tr><td>Runtime loop</td><td>1</td><td>Stop conditions и post-validation результата не описаны как runtime policy.</td><td>evals/files/sample-agents/agents/response-drafter.md#L9-L12</td></tr>
+<tr><td>Evaluation</td><td>2</td><td>Fixture review существует, но негативные сценарии на incomplete input не выделены отдельно.</td><td>evals/evals.json#L225-L239, evals/expected-findings.md#L13-L18</td></tr>
+<tr><td>Observability</td><td>1</td><td>Сигналов на refusal, partial output и hallucination detection в артефактах нет.</td><td>evals/files/sample-agents/agents/response-drafter.md#L1-L12</td></tr>
+<tr><td>Safety</td><td>1</td><td>Prompt разрешает достраивать недостающие данные из контекста.</td><td>evals/files/sample-agents/agents/response-drafter.md#L11</td></tr>
+<tr><td>Change management</td><td>3</td><td>Артефакты в версии есть и change risk на prompt хорошо локализуется по одному файлу.</td><td>evals/files/sample-agents/agents/response-drafter.md#L1-L12, evals/review-dashboard-runbook.md#L112-L119</td></tr></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Текущий контракт</div><div class="text-xs text-slate-500 mb-2">Потребитель: <span class="mono">user + supervisor</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Write a complete response. Keep the output flexible and natural, there is no need for a strict response schema.</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Целевой контракт</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | partial | error&quot;,
+  &quot;draft&quot;: &quot;string&quot;,
+  &quot;missing_inputs&quot;: [&quot;string&quot;],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="anti-patterns"><div class="font-semibold mb-2">Анти-паттерны и системные риски</div><div class="flex flex-wrap gap-2"><span class="chip chip-neutral" title="Prompt провоцирует достраивание фактов вместо честной деградации.">Unsafe completion</span>
+<span class="chip chip-neutral" title="Результат нельзя надёжно валидировать программно.">Free-form output</span>
+<span class="chip chip-neutral" title="Supervisor не обязан передавать фиксированный набор подтверждённых фактов.">Implicit input contract</span></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="backlog"><div class="font-semibold mb-3">Бэклог</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Действие</th><th>Слой</th><th>Риск</th><th>Точка</th></tr></thead><tbody><tr><td>Запретить заполнение пробелов догадками и ввести honest partial path.</td><td>Control</td><td><span class="chip chip-danger">Breaking</span></td><td><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11-L12</span></td></tr>
+<tr><td>Ввести strict response schema со status, draft и missing_inputs.</td><td>Output</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11-L12</span></td></tr>
+<tr><td>Формализовать handoff от supervisor как список подтверждённых facts и documents.</td><td>Input</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L9-L12</span></td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan"><div class="font-semibold mb-3">План патчей, топ-3</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Запретить домысливание</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11</span> · prompt · Breaking</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">If required facts are missing, do not fill gaps from context. Return status=&quot;partial&quot; and list the missing inputs explicitly.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить incomplete-input сценарий и ожидать status=partial.</li><li>Убедиться, что черновик не содержит неподтверждённых фактов.</li><li>Проверить, что refusal/partial path стабилен в repeated runs.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Ввести строгий output contract</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11-L12</span> · schema · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | partial | error&quot;,
+  &quot;draft&quot;: &quot;string&quot;,
+  &quot;missing_inputs&quot;: [&quot;string&quot;],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить парсинг результата без regex-эвристик.</li><li>Проверить success и partial paths.</li><li>Проверить, что downstream consumer может валидировать schema.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Формализовать вход от supervisor</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L9-L12</span> · schema · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Expected input: { &quot;facts&quot;: [...], &quot;documents&quot;: [...], &quot;confidence&quot;: &quot;string&quot; }. Ignore any data outside this payload.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Проверить, что agent использует только переданные поля.</li><li>Проверить, что отсутствие facts приводит к partial path.</li><li>Проверить cross-agent contract matrix после изменения.</li></ul></div></div></div></article>
+    </section>
+
+    <section id="view-issues" class="view hidden space-y-6">
+      <div class="panel rounded-3xl p-6 border-l-4 border-rose-500">
+        <h2 class="text-lg font-bold text-rose-900 mb-4">Критические проблемы</h2>
+        <div class="space-y-3 text-sm">
+          <p><strong>1.</strong> Supervisor смешивает routing и final answer, поэтому граница функции ломается первой.</p>
+<p><strong>2.</strong> Document-finder не имеет typed handoff и детерминированной failure policy.</p>
+<p><strong>3.</strong> Response-drafter unsafe-by-design, потому что prompt разрешает достраивать факты.</p>
+<p><strong>4.</strong> Eval и observability существуют только на уровне fixture review, а не как per-agent contracts.</p>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-4">Матрица зрелости</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm data-table">
+            <thead>
+              <tr class="border-b border-stone-200 text-left">
+                <th>Агент</th><th>Граница</th><th>Control</th><th>Mechanism</th><th>Eval</th><th>Safety</th><th>Итог</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono">supervisor</span></td><td>1</td><td>1</td><td>1</td><td>2</td><td>1</td><td>12</td></tr>
+<tr><td><span class="mono">document-finder</span></td><td>3</td><td>2</td><td>2</td><td>2</td><td>2</td><td>18</td></tr>
+<tr><td><span class="mono">response-drafter</span></td><td>2</td><td>1</td><td>2</td><td>2</td><td>1</td><td>16</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-4">Матрица контрактов</h2>
+        <p class="text-sm text-slate-500 mb-4">Строки показывают источник handoff, столбцы — потребителя. Каждая ячейка хранит статус и инженерный риск.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm data-table">
+            <thead>
+              <tr class="border-b border-stone-200 text-left">
+                <th>Источник</th><th>supervisor</th><th>document-finder</th><th>response-drafter</th><th>user</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono">supervisor</span></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">self</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">handoff есть, payload не типизирован</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">route decision задан прозой</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">ответ уходит free text</div></td></tr>
+<tr><td><span class="mono">document-finder</span></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">возврат документов идёт prose-ответом supervisor-у</div></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">self</div></td><td><span class="chip chip-neutral">absent</span><div class="text-xs text-slate-500 mt-1">прямого контракта на response-drafter нет</div></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">напрямую пользователю не отвечает</div></td></tr>
+<tr><td><span class="mono">response-drafter</span></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">формат входа от supervisor не описан схемой</div></td><td><span class="chip chip-neutral">absent</span><div class="text-xs text-slate-500 mt-1">прямого handoff с document-finder нет</div></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">self</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">итог свободный и невалидируемый</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-3">Дорожная карта</h2>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Фаза 1. Function + contract</div><p class="text-slate-600 mt-1">Разделить routing и final assembly, затем ввести typed contracts на каждом межагентном стыке.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Фаза 2. Runtime + safety</div><p class="text-slate-600 mt-1">Добавить bounded retry, timeout, refusal и partial paths там, где сейчас есть только prose-эвристики.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Фаза 3. Eval + observability</div><p class="text-slate-600 mt-1">Закрыть agent-level regressions, telemetry по маршрутам и сигналы на unsafe completion.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, curve: 'basis' } });
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+      document.getElementById('view-' + name).classList.remove('hidden');
+      document.querySelectorAll('[id^="btn-"]').forEach(b => {
+        b.classList.remove('tab-active');
+        b.classList.add('tab-inactive');
+      });
+      const btn = document.getElementById('btn-' + name);
+      btn.classList.remove('tab-inactive');
+      btn.classList.add('tab-active');
+      if (name === 'overview') {
+        mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+      }
+    }
+  </script>
+</body>
+</html>

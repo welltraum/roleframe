@@ -11,7 +11,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: welltraum
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # RoleFrame
@@ -46,8 +46,8 @@ An agent is a **designed software function** with explicit boundaries — not a 
 Load only what is needed for the current mode:
 
 - Design: [references/methodology.md](references/methodology.md), [references/checklist.md](references/checklist.md), [references/passport-template.md](references/passport-template.md)
-- Review: [references/prompt-archaeology.md](references/prompt-archaeology.md), [references/anti-patterns.md](references/anti-patterns.md), [references/audit-template.md](references/audit-template.md)
-- Dashboard: [assets/dashboard-template.html](assets/dashboard-template.html)
+- Review: [references/prompt-archaeology.md](references/prompt-archaeology.md), [references/anti-patterns.md](references/anti-patterns.md), [references/structured-audit.md](references/structured-audit.md), [references/audit-template.md](references/audit-template.md)
+- Dashboard: [references/dashboard-playbook.md](references/dashboard-playbook.md), [assets/dashboard-template.html](assets/dashboard-template.html)
 
 ### IDEF0 model (always apply)
 
@@ -140,7 +140,7 @@ Before scoring, apply [references/prompt-archaeology.md](references/prompt-archa
 ### Step 3: Anti-pattern scan
 Load [references/anti-patterns.md](references/anti-patterns.md) and scan each agent systematically. For every pattern that fires: name it (AP-N), quote the evidence with file:line, state the risk. Add to backlog.
 
-### Step 4: Audit each agent
+### Step 4: Audit each agent into structured JSON
 
 **CRITICAL: Audit is based on CODE, not documentation.** For every claim:
 - Read the actual source files (prompts, Python runtime, tool factory, tests)
@@ -149,21 +149,20 @@ Load [references/anti-patterns.md](references/anti-patterns.md) and scan each ag
 - If eval framework exists but has no agent-specific scenarios — say "framework exists, scenarios missing" (not "eval absent")
 - Every maturity score must cite `file:line`; score without evidence = 0
 
-Follow [references/audit-template.md](references/audit-template.md) — the template defines 17 sections including:
-- **Section 0**: artifact map with criticality — decompose agent into passport / prompt / skill / tool / runtime / memory / eval / observability / versioning artifacts before scoring
-- **Sections 1-3b**: boundary, minimal function, IDEF0 (with evidence column), Input analysis, Output contract (5 paths: happy/empty/error/refusal/delegation + consumer + validation)
-- **Section 4 (Control)**: split into 4a role, 4b SOP, 4c constraints, 4d decision rules — each with evidence
-- **Section 5 (Mechanism)**: 5a composition tables (skills/tools/memory/runtime) + 5b execution & orchestration checklist (retry, timeout, fallback, cycle protection)
-- **Section 6**: traceability matrix — rule → where defined → where implemented → where tested → gap?
-- **Section 7 (Evaluation)**: found/not found + coverage table by scenario class
-- **Section 8 (Operations)**: minimum signals table (request, route, rejection, latency, cost, output validation)
-- **Section 9 (Change management)**: change cycle verification table per artifact
-- **Section 10**: inter-artifact conflicts and duplication
-- **Section 11**: maturity scoring 0-3 per criterion, each score requires `file:line` evidence
-- **Section 14**: context budget split into static + dynamic
-- **Section 15**: backlog table (action / layer / artifact / file / priority / regression risk)
-- **Section 16**: patch plan for top-3 deficits — each change specifies target, layer, patch type, draft, and how to verify
-- **Section 17**: structured verdict with example format
+Build a canonical `NN_name.audit.json` using [references/structured-audit.md](references/structured-audit.md).
+
+The LLM must fill the semantic fields only:
+- `metadata`
+- `summary`
+- `idef0`
+- `criteria`
+- `evidence_points`
+- `contracts`
+- `anti_patterns`
+- `backlog`
+- `patch_plan`
+
+Use [references/audit-template.md](references/audit-template.md) as the target markdown layout that will be rendered from this JSON, not as an invitation to hand-write a long markdown file first.
 
 Score each of the 10 criteria using the rubric in [references/methodology.md](references/methodology.md).
 
@@ -209,108 +208,57 @@ Example:
 - Hidden dependencies (used but undeclared) — AP-14
 - Cross-agent contract matrix: for each agent-to-agent connection, is the handoff payload typed?
 
-### Step 6: Generate output files
-- Per-agent audit: `docs/agent_audit/NN_name.md`
-- Summary: `docs/agent_audit/README.md`
-- Number files `01_`, `02_` by hierarchy (supervisor first)
-- Before claiming success, verify that the audit files and `README.md` were actually generated
-- **After writing all audit files, immediately generate the HTML dashboard** — follow the full dashboard generation procedure below (Steps 1–4 of Mode: dashboard). The user should not need to run a separate command after `review`.
+### Step 6: Generate output files through the renderer
+- Write per-agent structured audits: `docs/agent_audit/NN_name.audit.json`
+- Write package summary: `docs/agent_audit/summary.audit.json`
+- Number files `01_`, `02_` by hierarchy, supervisor first
+- Run `uv run scripts/render_audit_package.py --input docs/agent_audit --output docs/agent_audit`
+- The renderer must generate:
+  - `docs/agent_audit/NN_name.md`
+  - `docs/agent_audit/README.md`
+  - `docs/agent_audit/dashboard.html`
+- Before claiming success, verify that the JSON package, markdown views, and dashboard all exist
 
 ---
 
 ## Mode: dashboard
 
-**This mode rebuilds the HTML from existing audit files.** Use it when audit files already exist and you want to regenerate or update the dashboard only — for example after manual edits to audit files, or to refresh after a partial re-review.
+**This mode rebuilds the dashboard from an existing audit package.** Use it when review artifacts already exist and you want to regenerate or update the views only.
 
 If no audit files exist yet — say so and suggest running `/roleframe review` first.
 
 ### Step 1: Read audit data
-- Read all `docs/agent_audit/*.md` (skip README.md)
-- Extract per agent: name, score, short verdict, IDEF0 summary, 10 criteria values, top deficits, backlog items, key evidence points, anti-patterns, output contract details
+- Read `docs/agent_audit/*.audit.json` and `docs/agent_audit/summary.audit.json` first
+- If structured JSON is absent, attempt a compatibility import from legacy `docs/agent_audit/*.md`
+- If legacy markdown lacks evidence / contracts / patch-plan sections needed for deterministic rendering, stop and tell the user to rerun `/roleframe review`
 - Additionally load the project methodology source for dashboard onboarding:
   - If `docs/methodology.<lang>.md` exists, use it as the primary source for the Methodology view
   - Otherwise use `docs/methodology.ru.md` and `docs/methodology.en.md` as bilingual reference sources
   - If those files do not exist, fall back to [references/methodology.md](references/methodology.md) only
-- If an older dashboard exists (for example `docs/agent_audit_old_01/dashboard.html`), inspect it for information density and layout cues before rebuilding the new HTML
 - If no audits — suggest `/roleframe review` first
 
 ### Step 2: Detect language and set it for the entire HTML
 The dashboard language = language of the request that triggered this skill. Set it once as a constant and apply everywhere: tab labels, section headers, criteria names, badge text, tooltips, backlog items, roadmap phases.
 
-### Step 3: Build HTML from template
+### Step 3: Run the renderer
 
-**CRITICAL: You MUST use [assets/dashboard-template.html](assets/dashboard-template.html) as the foundation. Do NOT generate HTML from scratch. Do NOT invent your own CSS or layout.**
+**CRITICAL: You MUST use [assets/dashboard-template.html](assets/dashboard-template.html) and [references/dashboard-playbook.md](references/dashboard-playbook.md).**
 
-The template is a single complete HTML file with `{{PLACEHOLDER}}` markers. It contains all four views, all CSS, the tab-switching script, and the exact HTML structure for every section.
+Do not hand-write HTML. Do not invent a parallel layout. Run:
 
-**How to generate:**
+`uv run scripts/render_audit_package.py --input docs/agent_audit --output docs/agent_audit`
 
-1. Read `assets/dashboard-template.html` — this is your ONLY template file.
-2. Copy the entire file as the starting point for `dashboard.html`.
-3. Replace every `{{PLACEHOLDER}}` with real data from the audit files.
-4. Fill the template placeholders with generated HTML blocks and strings. The current template expects these placeholders:
-   - Header and tabs: `{{PAGE_TITLE}}`, `{{DASHBOARD_TITLE}}`, `{{SUBTITLE}}`, `{{TAB_OVERVIEW}}`, `{{TAB_METHODOLOGY}}`, `{{TAB_AGENTS}}`, `{{TAB_ISSUES}}`
-   - Overview: `{{OVERVIEW_SUMMARY_CARDS}}`, `{{ARCHITECTURE_HEADING}}`, `{{ARCHITECTURE_TEXT}}`, `{{MERMAID_ARCHITECTURE}}`, `{{SCORES_HEADING}}`, `{{SCORE_ROWS}}`
-   - Methodology: `{{METHODOLOGY_HEADING}}`, `{{METHODOLOGY_LEAD}}`, `{{METHODOLOGY_LINKS}}`, `{{METHODOLOGY_SUMMARY_BLOCKS}}`
-   - Agents: `{{AGENT_CARDS}}`
-   - Issues & roadmap: `{{CRITICAL_ISSUES_HEADING}}`, `{{CRITICAL_ISSUES_ITEMS}}`, `{{MATURITY_MATRIX_HEADING}}`, `{{MATURITY_MATRIX_HEADER}}`, `{{MATURITY_MATRIX_ROWS}}`, `{{CONTRACT_MATRIX_HEADING}}`, `{{CONTRACT_MATRIX_TEXT}}`, `{{CONTRACT_MATRIX_HEADER}}`, `{{CONTRACT_MATRIX_ROWS}}`, `{{ROADMAP_HEADING}}`, `{{ROADMAP_PHASES}}`
-5. Do not invent extra sections that are not present in the template. Generate dense content inside the existing placeholder blocks.
-6. Before claiming success, verify that `docs/agent_audit/dashboard.html` exists and the four views are non-empty.
+The renderer is responsible for:
+- validating the structured audit package
+- rendering markdown views
+- filling the bundled HTML template
+- keeping the agents view dense without repeating long prose
 
-**Verification checklist — the output MUST have:**
-- [ ] 4 tab buttons in the header that switch views
-- [ ] `<section id="view-overview">` with summary cards, mermaid graph, and score rows
-- [ ] `<section id="view-methodology">` with compact onboarding text and links to detailed methodology docs
-- [ ] `<section id="view-agents">` with one dense agent card per agent
-- [ ] `<section id="view-issues">` with critical issues, maturity matrix, contract matrix, and roadmap
-- [ ] None of the four views are empty
-
-The dashboard has **four views**:
-
-**View 1 — Overview (Обзор):**
-- 3-4 summary cards with overall verdict, average score, number of canonical findings, and top systemic risk
-- Mermaid architecture graph and a short architecture analysis paragraph
-- Score rows for all agents with score bar, maturity label, and one-line top deficit
-
-**View 2 — Methodology onboarding (Методология):**
-- This view should stay compact and point to the detailed methodology docs in `docs/methodology.ru.md` and `docs/methodology.en.md`
-- Use the methodology docs as the primary source when they exist
-- Include a short lead paragraph explaining that detailed methodology has been moved out of the dashboard for readability
-- Add 2 summary blocks:
-  - what the methodology covers
-  - how to use methodology docs together with the audit package
-- Keep the narrative grounded in:
-  - why agent ≠ LLM
-  - the split between engineering and research loops
-  - the principle `Агент = бизнес-функция`
-  - why requirements are built around IDEF0 and typed contracts
-
-**View 3 — Agents (Агенты):**
-Each agent card should be dense and readable without opening the markdown audit. It must include:
-- **Source links block**: generated audit markdown plus the primary source files used for evidence
-- **Short verdict card**: one short paragraph describing the main engineering problem
-- **IDEF0 summary block**: input / control / mechanism / output in compact form
-- **Evidence block**: 3-4 key evidence points with `file:line`
-- **Criteria table**: criterion, score, and one-line explanation for all 10 maturity criteria
-- **Current vs target contract**: compact code blocks or pseudo-JSON
-- **Anti-patterns / systemic risks**: named tags such as AP-14, AP-15, Free-form output, Safety risk
-- **Backlog table**: action, layer, regression risk, file:line
-
-The current template does not support collapsible sub-sections. Do not describe or expect them in the generated output.
-
-**View 4 — Issues & Roadmap (Проблемы и роадмап):**
-- **Critical issues section**: 3-5 most dangerous systemic problems first
-- **Maturity matrix**: compact table with agents as rows and selected weak dimensions visible at a glance
-- **Cross-agent contract matrix**: rows = source agents, columns = consumer agents, cells = `typed` / `implicit` / `absent` / `n/a`
-  - `typed` = explicit machine-readable schema is visible
-  - `implicit` = handoff exists, but the payload is free-form text
-  - `absent` = a direct handoff is expected but the contract is not defined
-  - `n/a` = no direct handoff is intended
-- **Roadmap**: phased sequence `function + contract → runtime + safety → eval + observability`
-- Keep this view executive and scannable. The dashboard should highlight patterns, not duplicate the full markdown audits.
-
-### Step 4: Write output
-Save to `docs/agent_audit/dashboard.html` and report the path.
+### Step 4: Verify the rendered package
+- `docs/agent_audit/dashboard.html` exists
+- the four views are non-empty
+- each agent card includes source links, verdict, IDEF0, evidence, 10 criteria, contracts, anti-patterns, backlog, and patch-plan summary
+- if compatibility import was attempted and failed, report that a fresh `/roleframe review` is required
 
 ---
 

@@ -21,7 +21,7 @@ That framing makes design reviews repeatable, gives audits a stable rubric, and 
 |---|---|
 | `/roleframe design <description>` | Design a new agent or multi-agent system as business functions |
 | `/roleframe review [path]` | Audit existing agents against the RoleFrame maturity model |
-| `/roleframe dashboard [path]` | Build an HTML dashboard from audit markdown files |
+| `/roleframe dashboard [path]` | Build an HTML dashboard from a structured audit package |
 
 Russian prompts are supported directly, for example:
 
@@ -29,7 +29,7 @@ Russian prompts are supported directly, for example:
 - `Проведи аудит агентов`
 - `Собери дашборд агентов`
 
-The skill keeps output language aligned with the user request, including generated markdown and HTML artifacts.
+The skill keeps output language aligned with the user request, including generated JSON, markdown, and HTML artifacts.
 
 ## Install and use
 
@@ -64,9 +64,11 @@ roleframe/
 │   ├── anti-patterns.md
 │   ├── audit-template.md
 │   ├── checklist.md
+│   ├── dashboard-playbook.md
 │   ├── methodology.md
 │   ├── passport-template.md
-│   └── prompt-archaeology.md
+│   ├── prompt-archaeology.md
+│   └── structured-audit.md
 ├── evals/
 │   ├── evals.json
 │   ├── expected-findings.md
@@ -82,6 +84,7 @@ roleframe/
 │   ├── benchmark_eval.py
 │   ├── check_eval_artifacts.py
 │   ├── prepare_eval.py
+│   ├── render_audit_package.py
 │   ├── render_eval_docs.py
 │   └── validate_skill.py
 └── eval-workspace/
@@ -161,16 +164,30 @@ The custom validator checks:
 - shape of `evals/evals.json`
 - generated eval docs are in sync with `evals/evals.json`
 
+The structured audit renderer validates:
+
+- `*.audit.json` schema completeness
+- 10 canonical maturity criteria
+- evidence presence
+- current/target contracts
+- backlog and top-3 patch plan
+
+Example:
+
+```bash
+uv run scripts/render_audit_package.py --input evals/files/sample-audits --output /tmp/roleframe-audit --check
+```
+
 `scripts/check_eval_artifacts.py` verifies the manual eval outputs that the benchmark depends on:
 
 - raw response export
-- audit markdown package for `review`
+- structured audit package plus markdown views for `review`
 - `dashboard.html` for `review` and `dashboard`
-- minimal content signals such as evidence references in review artifacts and HTML smoke checks for dashboards
+- minimal content signals such as evidence references, schema presence, and dense dashboard blocks
 
 ## Release policy
 
-`v0.2.0` is considered releasable only when all of the following are true:
+`v0.3.0` is considered releasable only when all of the following are true:
 
 - `skills-ref validate .` passes
 - `uv run scripts/validate_skill.py` passes

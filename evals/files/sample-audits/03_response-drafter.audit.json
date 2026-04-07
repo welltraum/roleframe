@@ -1,0 +1,220 @@
+{
+  "metadata": {
+    "name": "response-drafter",
+    "language": "ru",
+    "source_files": [
+      "evals/files/sample-agents/agents/response-drafter.md",
+      "evals/files/sample-agents/src/tools/factory.py"
+    ],
+    "reviewed_at": "2026-04-07"
+  },
+  "summary": {
+    "total_score": 16,
+    "maturity_level": "Рабочий прототип",
+    "verdict": "Response-drafter выделен как отдельная функция и не смешивается с поиском документов. Главная проблема сосредоточена в Control: prompt мотивирует сделать ответ полным даже на неполных данных. Для налогового сценария это делает agent unsafe-by-design.",
+    "top_deficit": "Prompt поощряет домысливание и не даёт честного partial path."
+  },
+  "idef0": {
+    "input": "Агент принимает документы и подтверждённые факты от других агентов. Формат входа подразумевается, но не описан как schema.",
+    "control": "Prompt требует написать полный ответ и заполнить пробелы из контекста. Ограничения на источники правды и честный refusal path отсутствуют.",
+    "mechanism": "Toolkit `drafting` минимален и соответствует задаче форматирования ответа. Риск создаётся не инструментами, а policy prompt-а.",
+    "output": "Выход — гибкий естественный текст без strict schema. Status для partial, empty и error path не определён."
+  },
+  "criteria": [
+    {
+      "key": "business_boundary",
+      "label": "Граница функции",
+      "score": 2,
+      "rationale": "Функция финальной сборки ответа отделена от поиска и маршрутизации.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L9-L10"
+      ]
+    },
+    {
+      "key": "input_definition",
+      "label": "Input",
+      "score": 2,
+      "rationale": "Вход от других агентов понятен по роли, но не зафиксирован как structured handoff.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L9-L12"
+      ]
+    },
+    {
+      "key": "control_layer",
+      "label": "Control",
+      "score": 1,
+      "rationale": "Prompt описывает цель, но не ставит guardrails против выдумывания фактов.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L11-L12"
+      ]
+    },
+    {
+      "key": "mechanism_layer",
+      "label": "Mechanism",
+      "score": 2,
+      "rationale": "Toolkit минимален и уместен для задачи финальной сборки ответа.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L5-L7",
+        "evals/files/sample-agents/src/tools/factory.py#L1-L4"
+      ]
+    },
+    {
+      "key": "context_engineering",
+      "label": "Context engineering",
+      "score": 1,
+      "rationale": "Источник правды не отделён от вспомогательного контекста и это оставляет свободную зону для галлюцинации.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L11-L12"
+      ]
+    },
+    {
+      "key": "runtime_loop",
+      "label": "Runtime loop",
+      "score": 1,
+      "rationale": "Stop conditions и post-validation результата не описаны как runtime policy.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L9-L12"
+      ]
+    },
+    {
+      "key": "evaluation",
+      "label": "Evaluation",
+      "score": 2,
+      "rationale": "Fixture review существует, но негативные сценарии на incomplete input не выделены отдельно.",
+      "evidence": [
+        "evals/evals.json#L225-L239",
+        "evals/expected-findings.md#L13-L18"
+      ]
+    },
+    {
+      "key": "observability",
+      "label": "Observability",
+      "score": 1,
+      "rationale": "Сигналов на refusal, partial output и hallucination detection в артефактах нет.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L1-L12"
+      ]
+    },
+    {
+      "key": "safety",
+      "label": "Safety",
+      "score": 1,
+      "rationale": "Prompt разрешает достраивать недостающие данные из контекста.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L11"
+      ]
+    },
+    {
+      "key": "change_management",
+      "label": "Change management",
+      "score": 3,
+      "rationale": "Артефакты в версии есть и change risk на prompt хорошо локализуется по одному файлу.",
+      "evidence": [
+        "evals/files/sample-agents/agents/response-drafter.md#L1-L12",
+        "evals/review-dashboard-runbook.md#L112-L119"
+      ]
+    }
+  ],
+  "evidence_points": [
+    {
+      "layer": "Control",
+      "source": "evals/files/sample-agents/agents/response-drafter.md#L11",
+      "claim": "Prompt разрешает заполнять пробелы из контекста, а не только из подтверждённых фактов."
+    },
+    {
+      "layer": "Output",
+      "source": "evals/files/sample-agents/agents/response-drafter.md#L12",
+      "claim": "Строгая схема результата не требуется и это делает downstream parsing хрупким."
+    },
+    {
+      "layer": "Mechanism",
+      "source": "evals/files/sample-agents/src/tools/factory.py#L3",
+      "claim": "Toolkit сам по себе не создаёт риск, значит проблема локализована в Control."
+    },
+    {
+      "layer": "Evaluation",
+      "source": "evals/expected-findings.md#L13-L18",
+      "claim": "Baseline review прямо ожидает finding про unsafe completion behavior."
+    }
+  ],
+  "contracts": {
+    "consumer": "user + supervisor",
+    "current_contract": "Write a complete response. Keep the output flexible and natural, there is no need for a strict response schema.",
+    "target_contract": "{\n  \"status\": \"success | partial | error\",\n  \"draft\": \"string\",\n  \"missing_inputs\": [\"string\"],\n  \"reason\": \"string\"\n}"
+  },
+  "anti_patterns": [
+    {
+      "tag": "Unsafe completion",
+      "explanation": "Prompt провоцирует достраивание фактов вместо честной деградации."
+    },
+    {
+      "tag": "Free-form output",
+      "explanation": "Результат нельзя надёжно валидировать программно."
+    },
+    {
+      "tag": "Implicit input contract",
+      "explanation": "Supervisor не обязан передавать фиксированный набор подтверждённых фактов."
+    }
+  ],
+  "backlog": [
+    {
+      "priority": "P1",
+      "layer": "Control",
+      "risk": "Breaking",
+      "action": "Запретить заполнение пробелов догадками и ввести honest partial path.",
+      "file_ref": "evals/files/sample-agents/agents/response-drafter.md#L11-L12"
+    },
+    {
+      "priority": "P1",
+      "layer": "Output",
+      "risk": "Behavioural",
+      "action": "Ввести strict response schema со status, draft и missing_inputs.",
+      "file_ref": "evals/files/sample-agents/agents/response-drafter.md#L11-L12"
+    },
+    {
+      "priority": "P2",
+      "layer": "Input",
+      "risk": "Behavioural",
+      "action": "Формализовать handoff от supervisor как список подтверждённых facts и documents.",
+      "file_ref": "evals/files/sample-agents/agents/response-drafter.md#L9-L12"
+    }
+  ],
+  "patch_plan": [
+    {
+      "title": "Запретить домысливание",
+      "target": "evals/files/sample-agents/agents/response-drafter.md#L11",
+      "patch_type": "prompt",
+      "risk": "Breaking",
+      "draft": "If required facts are missing, do not fill gaps from context. Return status=\"partial\" and list the missing inputs explicitly.",
+      "verification": [
+        "Проверить incomplete-input сценарий и ожидать status=partial.",
+        "Убедиться, что черновик не содержит неподтверждённых фактов.",
+        "Проверить, что refusal/partial path стабилен в repeated runs."
+      ]
+    },
+    {
+      "title": "Ввести строгий output contract",
+      "target": "evals/files/sample-agents/agents/response-drafter.md#L11-L12",
+      "patch_type": "schema",
+      "risk": "Behavioural",
+      "draft": "{\n  \"status\": \"success | partial | error\",\n  \"draft\": \"string\",\n  \"missing_inputs\": [\"string\"],\n  \"reason\": \"string\"\n}",
+      "verification": [
+        "Проверить парсинг результата без regex-эвристик.",
+        "Проверить success и partial paths.",
+        "Проверить, что downstream consumer может валидировать schema."
+      ]
+    },
+    {
+      "title": "Формализовать вход от supervisor",
+      "target": "evals/files/sample-agents/agents/response-drafter.md#L9-L12",
+      "patch_type": "schema",
+      "risk": "Behavioural",
+      "draft": "Expected input: { \"facts\": [...], \"documents\": [...], \"confidence\": \"string\" }. Ignore any data outside this payload.",
+      "verification": [
+        "Проверить, что agent использует только переданные поля.",
+        "Проверить, что отсутствие facts приводит к partial path.",
+        "Проверить cross-agent contract matrix после изменения."
+      ]
+    }
+  ]
+}

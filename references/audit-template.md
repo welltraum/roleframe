@@ -1,4 +1,4 @@
-# Шаблон архитектурного аудита агента
+# Шаблон рендера markdown-аудита
 
 ## Быстрая карта разделов
 
@@ -14,7 +14,27 @@
 - Traceability, eval, operations, change management
 - Конфликты, scoring, backlog, patch plan, verdict
 
-Используй для генерации файла аудита. Путь: `docs/agent_audit/NN_name.md`.
+Используй как целевой layout для `docs/agent_audit/NN_name.md`.
+
+**Канонический источник теперь не markdown, а** `docs/agent_audit/NN_name.audit.json`.
+
+Markdown-файл рендерится из structured audit package и должен оставаться человекочитаемым представлением тех же данных.
+
+## Связка JSON -> markdown
+
+| Раздел markdown | JSON-поле |
+|---|---|
+| Источники | `metadata.source_files` |
+| Вердикт | `summary.*` |
+| IDEF0 | `idef0.*` |
+| Критерии зрелости | `criteria[]` |
+| Evidence points | `evidence_points[]` |
+| Контракты | `contracts.*` |
+| Anti-patterns | `anti_patterns[]` |
+| Бэклог | `backlog[]` |
+| Patch plan | `patch_plan[]` |
+
+Подробная схема и budgets описаны в [structured-audit.md](structured-audit.md).
 
 ## Принцип аудита
 

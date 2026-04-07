@@ -31,7 +31,7 @@ Use these cases for a structured with-skill vs without-skill comparison.
 
 **Prompt:** `Create an HTML dashboard for the agent audit in evals/files/sample-audits/`
 
-**Expected improvement:** With the skill, the dashboard should follow the bundled template and RoleFrame semantics better than baseline.
+**Expected improvement:** With the skill, the dashboard should follow the bundled template and render from a structured audit package better than baseline.
 
 **Assertions:**
 - [ ] The with-skill output uses the bundled template path.

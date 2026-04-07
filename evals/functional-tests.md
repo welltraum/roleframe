@@ -41,7 +41,7 @@ including evidence-based scoring, backlog actions, and generated dashboard artif
 
 ## Mode: review
 
-### Test R1: A full review over the fixture agents with evidence-driven findings, audit markdown files, and a dashboard build.
+### Test R1: A full review over the fixture agents with evidence-driven findings, structured audit JSON files, rendered markdown views, and a dashboard build.
 
 **Input:** `/roleframe review evals/files/sample-agents/agents`
 
@@ -51,7 +51,7 @@ including evidence-based scoring, backlog actions, and generated dashboard artif
 - [ ] The response cites concrete file paths or file:line evidence.
 - [ ] The response scores maturity criteria or uses an explicit audit rubric.
 - [ ] The response includes cross-agent analysis or overlap findings.
-- [ ] The response creates or clearly intends an audit package and dashboard HTML as review artifacts.
+- [ ] The response creates or clearly intends structured audit JSON, rendered markdown views, and dashboard HTML as review artifacts.
 
 ### Test R2: The skill uses default discovery when no path argument is supplied.
 
@@ -74,12 +74,12 @@ including evidence-based scoring, backlog actions, and generated dashboard artif
 
 ## Mode: dashboard
 
-### Test B1: A dashboard build using the fixture audits and the bundled HTML template.
+### Test B1: A dashboard build using the structured fixture audits and the bundled HTML template.
 
 **Input:** `/roleframe dashboard evals/files/sample-audits`
 
 **Expected behavior:**
-- [ ] The response reads audit markdown files as input.
+- [ ] The response reads structured audit files first, with markdown only as fallback.
 - [ ] The response references the bundled HTML template.
 - [ ] The output target is docs/agent_audit/dashboard.html.
 - [ ] The response expects overview, methodology, agents, and issues views.

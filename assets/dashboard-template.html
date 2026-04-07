@@ -71,6 +71,35 @@
       font-size: 12px;
       font-weight: 600;
     }
+    .section-lead {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 74ch;
+    }
+    .subpanel {
+      border: 1px solid #ebe3d7;
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .code-frame {
+      border-radius: 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    [data-agent-card] {
+      scroll-margin-top: 96px;
+    }
+    [data-block="criteria"] th,
+    [data-block="backlog"] th {
+      white-space: nowrap;
+    }
+    [data-block="patch-plan-item"] pre {
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body class="min-h-screen">

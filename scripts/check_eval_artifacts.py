@@ -81,6 +81,33 @@ FINDING_PATTERNS = {
     ],
 }
 
+STRUCTURED_AGENT_REQUIRED = {
+    "metadata",
+    "summary",
+    "idef0",
+    "criteria",
+    "evidence_points",
+    "contracts",
+    "anti_patterns",
+    "backlog",
+    "patch_plan",
+}
+
+STRUCTURED_SUMMARY_REQUIRED = {
+    "language",
+    "title",
+    "subtitle",
+    "overall_verdict",
+    "overview_cards",
+    "canonical_findings",
+    "architecture",
+    "critical_issues",
+    "maturity_matrix",
+    "contract_matrix",
+    "roadmap",
+    "agents_lead",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate expected eval artifacts for one iteration.")
@@ -100,8 +127,10 @@ def candidate_paths(artifact_id: str, output_dir: Path) -> list[Path]:
             output_dir / "response.json",
         ],
         "audit_summary": [output_dir / "docs" / "agent_audit" / "README.md"],
+        "structured_summary": [output_dir / "docs" / "agent_audit" / "summary.audit.json"],
         "dashboard_html": [output_dir / "docs" / "agent_audit" / "dashboard.html"],
         "agent_audits": list((output_dir / "docs" / "agent_audit").glob("[0-9][0-9]_*.md")),
+        "structured_audits": list((output_dir / "docs" / "agent_audit").glob("[0-9][0-9]_*.audit.json")),
     }
     return mapping.get(artifact_id, [])
 
@@ -143,9 +172,60 @@ def check_dashboard_html(path: Path) -> tuple[bool, str]:
         "дорож",
     ]
     marker_hits = sum(1 for marker in markers if marker in text.lower())
-    ok = ("<html" in text.lower() or "<!doctype html" in text.lower()) and len(text) >= 500 and marker_hits >= 2
-    details = f"len={len(text)}, semantic_markers={marker_hits}"
+    dense_markers = [
+        'data-agent-card="',
+        'data-block="evidence"',
+        'data-block="criteria"',
+        'data-block="contracts"',
+        'data-block="backlog"',
+        'data-block="patch-plan"',
+    ]
+    dense_hits = sum(1 for marker in dense_markers if marker in text)
+    ok = ("<html" in text.lower() or "<!doctype html" in text.lower()) and len(text) >= 500 and marker_hits >= 2 and dense_hits >= 5
+    details = f"len={len(text)}, semantic_markers={marker_hits}, dense_markers={dense_hits}"
     return ok, details
+
+
+def validate_structured_agent(path: Path) -> tuple[bool, str]:
+    payload = read_json(path)
+    missing = STRUCTURED_AGENT_REQUIRED - set(payload)
+    if missing:
+        return False, f"{path.name}: missing_keys={sorted(missing)}"
+
+    criteria = payload.get("criteria", [])
+    if not isinstance(criteria, list) or len(criteria) != 10:
+        return False, f"{path.name}: criteria_count={len(criteria) if isinstance(criteria, list) else 'invalid'}"
+
+    evidence_points = payload.get("evidence_points", [])
+    backlog = payload.get("backlog", [])
+    patch_plan = payload.get("patch_plan", [])
+    contracts = payload.get("contracts", {})
+
+    if not isinstance(evidence_points, list) or len(evidence_points) < 3:
+        return False, f"{path.name}: evidence_points={len(evidence_points) if isinstance(evidence_points, list) else 'invalid'}"
+    if not isinstance(backlog, list) or len(backlog) < 3:
+        return False, f"{path.name}: backlog={len(backlog) if isinstance(backlog, list) else 'invalid'}"
+    if not isinstance(patch_plan, list) or len(patch_plan) != 3:
+        return False, f"{path.name}: patch_plan={len(patch_plan) if isinstance(patch_plan, list) else 'invalid'}"
+    if not isinstance(contracts, dict) or not contracts.get("current_contract") or not contracts.get("target_contract"):
+        return False, f"{path.name}: contracts_incomplete"
+
+    return True, path.name
+
+
+def validate_structured_summary(path: Path, expected_agents: int) -> tuple[bool, str]:
+    payload = read_json(path)
+    missing = STRUCTURED_SUMMARY_REQUIRED - set(payload)
+    if missing:
+        return False, f"{path.name}: missing_keys={sorted(missing)}"
+
+    maturity_rows = payload.get("maturity_matrix", {}).get("rows", [])
+    contract_rows = payload.get("contract_matrix", {}).get("rows", [])
+    if len(maturity_rows) != expected_agents:
+        return False, f"{path.name}: maturity_rows={len(maturity_rows)} expected={expected_agents}"
+    if not contract_rows:
+        return False, f"{path.name}: contract_rows=0"
+    return True, path.name
 
 
 def check_review_content(manifest: dict, artifacts: dict[str, list[Path]]) -> list[dict]:
@@ -165,8 +245,21 @@ def check_review_content(manifest: dict, artifacts: dict[str, list[Path]]) -> li
         summary_len = len(summary_paths[0].read_text(encoding="utf-8", errors="ignore").strip())
         add_check(checks, "review_summary_nonempty", summary_len > 20, f"chars={summary_len}")
 
+    structured_paths = artifacts.get("structured_audits", [])
+    structured_results = [validate_structured_agent(path) for path in structured_paths]
+    if structured_results:
+        ok = all(result[0] for result in structured_results)
+        details = "; ".join(result[1] for result in structured_results)
+        add_check(checks, "structured_audit_schema", ok, details)
+
+    structured_summary_paths = artifacts.get("structured_summary", [])
+    if structured_summary_paths:
+        ok, details = validate_structured_summary(structured_summary_paths[0], len(structured_paths))
+        add_check(checks, "structured_summary_schema", ok, details)
+
     if manifest["id"] == "functional-review-r1":
-        text = (combined + "\n" + response_text(artifacts)).lower()
+        structured_text = read_many(structured_paths) if structured_paths else ""
+        text = (combined + "\n" + structured_text + "\n" + response_text(artifacts)).lower()
         category_hits = 0
         matched: list[str] = []
         for category, patterns in FINDING_PATTERNS.items():

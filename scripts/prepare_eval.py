@@ -107,7 +107,7 @@ def artifact_expectations(eval_id: str, tags: list[str], config_name: str) -> di
         }
 
     if "review" in tags:
-        required_with_skill.extend(["audit_summary", "dashboard_html", "agent_audits"])
+        required_with_skill.extend(["audit_summary", "dashboard_html", "agent_audits", "structured_audits", "structured_summary"])
     elif "dashboard" in tags and eval_id != "functional-dashboard-b2":
         required_with_skill.append("dashboard_html")
     elif eval_id == "functional-dashboard-b2":

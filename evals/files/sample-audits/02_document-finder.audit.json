@@ -1,0 +1,219 @@
+{
+  "metadata": {
+    "name": "document-finder",
+    "language": "ru",
+    "source_files": [
+      "evals/files/sample-agents/agents/document-finder.md",
+      "evals/files/sample-agents/src/tools/factory.py"
+    ],
+    "reviewed_at": "2026-04-07"
+  },
+  "summary": {
+    "total_score": 18,
+    "maturity_level": "Рабочий прототип",
+    "verdict": "Document-finder уже близок к атомарной бизнес-функции. Главные пробелы сосредоточены не в назначении агента, а в handoff и failure policy. Пока результат годится для прототипа, но не для надёжного multi-agent контракта.",
+    "top_deficit": "Нет typed handoff и формальной failure policy."
+  },
+  "idef0": {
+    "input": "Агент получает запрос на поиск документов от supervisor. Формат входа ожидается текстом, а не схемой.",
+    "control": "Prompt требует найти релевантные документы и сообщить о пустом результате. Правила retry и handoff описаны эвристически.",
+    "mechanism": "Toolkit `docs-search` даёт search и fetch capabilities. Runtime policy на timeout, retry count и budget не зафиксирована.",
+    "output": "Агент возвращает лучшие документы или сообщение об отсутствии результата. Машинный payload со status и bounded result set не задан."
+  },
+  "criteria": [
+    {
+      "key": "business_boundary",
+      "label": "Граница функции",
+      "score": 3,
+      "rationale": "Функция поиска документов выделена отдельно и читается однозначно.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L9-L11"
+      ]
+    },
+    {
+      "key": "input_definition",
+      "label": "Input",
+      "score": 2,
+      "rationale": "Вход понятен по роли агента, но не оформлен как typed schema.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L9-L11"
+      ]
+    },
+    {
+      "key": "control_layer",
+      "label": "Control",
+      "score": 2,
+      "rationale": "Happy path понятен, но contract для failure и handoff остаётся неполным.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L11-L14"
+      ]
+    },
+    {
+      "key": "mechanism_layer",
+      "label": "Mechanism",
+      "score": 2,
+      "rationale": "Toolkit соответствует назначению, но execution policy не доведена до runtime contract.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L5-L7",
+        "evals/files/sample-agents/src/tools/factory.py#L1-L4"
+      ]
+    },
+    {
+      "key": "context_engineering",
+      "label": "Context engineering",
+      "score": 1,
+      "rationale": "Правила сокращения выдачи и budget на payload не заданы.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L11-L14"
+      ]
+    },
+    {
+      "key": "runtime_loop",
+      "label": "Runtime loop",
+      "score": 1,
+      "rationale": "Retry описан как эвристика и не содержит timeout или give-up policy.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L12"
+      ]
+    },
+    {
+      "key": "evaluation",
+      "label": "Evaluation",
+      "score": 2,
+      "rationale": "Fixture review существует, но отдельные негативные сценарии агента не выделены.",
+      "evidence": [
+        "evals/evals.json#L225-L239",
+        "evals/expected-findings.md#L10-L14"
+      ]
+    },
+    {
+      "key": "observability",
+      "label": "Observability",
+      "score": 1,
+      "rationale": "Signals для empty result и retry count не оформлены как operations artifacts.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L1-L14"
+      ]
+    },
+    {
+      "key": "safety",
+      "label": "Safety",
+      "score": 2,
+      "rationale": "Агент не обещает лишнего, но tool-failure path всё ещё слаб.",
+      "evidence": [
+        "evals/files/sample-agents/agents/document-finder.md#L12-L14"
+      ]
+    },
+    {
+      "key": "change_management",
+      "label": "Change management",
+      "score": 2,
+      "rationale": "Версионность есть, но change cycle не закрыт негативными regression checks.",
+      "evidence": [
+        "evals/review-dashboard-runbook.md#L112-L119"
+      ]
+    }
+  ],
+  "evidence_points": [
+    {
+      "layer": "Control",
+      "source": "evals/files/sample-agents/agents/document-finder.md#L11-L14",
+      "claim": "Happy path описан, но handoff прямо разрешён без fixed schema."
+    },
+    {
+      "layer": "Runtime",
+      "source": "evals/files/sample-agents/agents/document-finder.md#L12",
+      "claim": "Retry задан формулой “if it feels worth it”, а не проверяемой политикой."
+    },
+    {
+      "layer": "Mechanism",
+      "source": "evals/files/sample-agents/src/tools/factory.py#L1-L4",
+      "claim": "Toolkit подтверждает, что у агента достаточно tools для функции поиска."
+    },
+    {
+      "layer": "Contract",
+      "source": "evals/files/sample-agents/agents/document-finder.md#L13-L14",
+      "claim": "Empty result и success path существуют только как prose response supervisor-у."
+    }
+  ],
+  "contracts": {
+    "consumer": "supervisor",
+    "current_contract": "Return the best documents in free text. If nothing is found, tell the supervisor that nothing is available.",
+    "target_contract": "{\n  \"status\": \"success | empty | error\",\n  \"documents\": [{\"id\": \"string\", \"title\": \"string\", \"relevance\": 0.0}],\n  \"reason\": \"string\"\n}"
+  },
+  "anti_patterns": [
+    {
+      "tag": "Untyped handoff",
+      "explanation": "Supervisor не получает machine-readable payload."
+    },
+    {
+      "tag": "Weak failure policy",
+      "explanation": "Timeout, retry count и give-up rules отсутствуют."
+    },
+    {
+      "tag": "Budget risk",
+      "explanation": "Размер возвращаемого набора документов никак не ограничен."
+    }
+  ],
+  "backlog": [
+    {
+      "priority": "P1",
+      "layer": "Control",
+      "risk": "Behavioural",
+      "action": "Ввести typed handoff payload со status, documents и reason.",
+      "file_ref": "evals/files/sample-agents/agents/document-finder.md#L11-L14"
+    },
+    {
+      "priority": "P1",
+      "layer": "Runtime",
+      "risk": "Safe",
+      "action": "Формализовать retry, timeout и give-up policy.",
+      "file_ref": "evals/files/sample-agents/agents/document-finder.md#L12"
+    },
+    {
+      "priority": "P2",
+      "layer": "Context",
+      "risk": "Safe",
+      "action": "Ограничить размер payload и число возвращаемых документов.",
+      "file_ref": "evals/files/sample-agents/agents/document-finder.md#L11-L14"
+    }
+  ],
+  "patch_plan": [
+    {
+      "title": "Typed handoff для найденных документов",
+      "target": "evals/files/sample-agents/agents/document-finder.md#L11-L14",
+      "patch_type": "schema",
+      "risk": "Behavioural",
+      "draft": "{\n  \"status\": \"success | empty | error\",\n  \"documents\": [{\"id\": \"string\", \"title\": \"string\", \"relevance\": 0.0}],\n  \"reason\": \"string\"\n}",
+      "verification": [
+        "Проверить happy path с 1-3 документами.",
+        "Проверить empty path без найденных документов.",
+        "Проверить, что supervisor может разобрать payload без эвристики."
+      ]
+    },
+    {
+      "title": "Failure policy вместо эвристического retry",
+      "target": "evals/files/sample-agents/agents/document-finder.md#L12",
+      "patch_type": "runtime",
+      "risk": "Safe",
+      "draft": "If the tool fails, retry once. If the second attempt fails or times out, return status=\"error\" and include the failure reason.",
+      "verification": [
+        "Смоделировать timeout и убедиться, что агент возвращает status=error.",
+        "Проверить, что число retry не превышает один.",
+        "Проверить, что текст prompt больше не использует эвристику feel-worth-it."
+      ]
+    },
+    {
+      "title": "Budget rule для результата поиска",
+      "target": "evals/files/sample-agents/agents/document-finder.md#L11-L14",
+      "patch_type": "prompt",
+      "risk": "Safe",
+      "draft": "Return at most 3 documents. Pass ids, titles, and short evidence snippets instead of full document bodies.",
+      "verification": [
+        "Проверить, что handoff не разрастается при большом количестве совпадений.",
+        "Проверить, что relevance и ids сохраняются.",
+        "Проверить, что response-drafter получает достаточно данных без context stuffing."
+      ]
+    }
+  ]
+}

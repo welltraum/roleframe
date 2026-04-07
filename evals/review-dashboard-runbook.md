@@ -41,8 +41,10 @@ The purpose is simple: catch Skills that are too underspecified for smaller mode
 Store generated artifacts under each run's `outputs/` directory.
 
 - Raw model response: `outputs/response.md`
-- Audit package: `outputs/docs/agent_audit/*.md`
+- Structured audit package: `outputs/docs/agent_audit/*.audit.json`
+- Rendered audit views: `outputs/docs/agent_audit/*.md`
 - Audit summary: `outputs/docs/agent_audit/README.md`
+- Structured summary: `outputs/docs/agent_audit/summary.audit.json`
 - Dashboard HTML: `outputs/docs/agent_audit/dashboard.html`
 
 If the client exports a raw response with a different extension, normalize it to `response.md` before grading.
@@ -82,7 +84,9 @@ If the client exports a raw response with a different extension, normalize it to
 
    This check now validates both file presence and minimal content signals. In particular:
 
+   - review outputs must include structured audit JSON plus rendered markdown views
    - review outputs must include evidence references in the audit package
+   - dashboard HTML must contain dense agent blocks for evidence, criteria, contracts, backlog, and patch plan
    - `functional-review-r1` is checked against the expected findings baseline heuristically
    - `functional-dashboard-b2` must not create `dashboard.html`
 

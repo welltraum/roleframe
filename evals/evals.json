@@ -224,7 +224,7 @@
     {
       "id": "functional-review-r1",
       "prompt": "/roleframe review evals/files/sample-agents/agents",
-      "expected_output": "A full review over the fixture agents with evidence-driven findings, audit markdown files, and a dashboard build.",
+      "expected_output": "A full review over the fixture agents with evidence-driven findings, structured audit JSON files, rendered markdown views, and a dashboard build.",
       "files": [
         "evals/files/sample-agents/agents/supervisor.md",
         "evals/files/sample-agents/agents/document-finder.md",
@@ -239,7 +239,7 @@
         "The response cites concrete file paths or file:line evidence.",
         "The response scores maturity criteria or uses an explicit audit rubric.",
         "The response includes cross-agent analysis or overlap findings.",
-        "The response creates or clearly intends an audit package and dashboard HTML as review artifacts."
+        "The response creates or clearly intends structured audit JSON, rendered markdown views, and dashboard HTML as review artifacts."
       ],
       "tags": ["functional", "review"]
     },
@@ -274,15 +274,19 @@
     {
       "id": "functional-dashboard-b1",
       "prompt": "/roleframe dashboard evals/files/sample-audits",
-      "expected_output": "A dashboard build using the fixture audits and the bundled HTML template.",
+      "expected_output": "A dashboard build using the structured fixture audits and the bundled HTML template.",
       "files": [
+        "evals/files/sample-audits/01_supervisor.audit.json",
+        "evals/files/sample-audits/02_document-finder.audit.json",
+        "evals/files/sample-audits/03_response-drafter.audit.json",
+        "evals/files/sample-audits/summary.audit.json",
         "evals/files/sample-audits/01_supervisor.md",
         "evals/files/sample-audits/02_document-finder.md",
         "evals/files/sample-audits/03_response-drafter.md",
         "assets/dashboard-template.html"
       ],
       "assertions": [
-        "The response reads audit markdown files as input.",
+        "The response reads structured audit files first, with markdown only as fallback.",
         "The response references the bundled HTML template.",
         "The output target is docs/agent_audit/dashboard.html.",
         "The response expects overview, methodology, agents, and issues views.",
@@ -332,8 +336,12 @@
     {
       "id": "comparison-c",
       "prompt": "Create an HTML dashboard for the agent audit in evals/files/sample-audits/",
-      "expected_output": "With the skill, the dashboard should follow the bundled template and RoleFrame semantics better than baseline.",
+      "expected_output": "With the skill, the dashboard should follow the bundled template and render from a structured audit package better than baseline.",
       "files": [
+        "evals/files/sample-audits/01_supervisor.audit.json",
+        "evals/files/sample-audits/02_document-finder.audit.json",
+        "evals/files/sample-audits/03_response-drafter.audit.json",
+        "evals/files/sample-audits/summary.audit.json",
         "evals/files/sample-audits/01_supervisor.md",
         "evals/files/sample-audits/02_document-finder.md",
         "evals/files/sample-audits/03_response-drafter.md",
