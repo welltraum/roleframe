@@ -1,5 +1,15 @@
 # RoleFrame Methodology Reference
 
+## Quick map
+
+- Foundation
+- Two complementary engineering loops
+- IDEF0 quadrants
+- Maturity criteria
+- Design workflow
+- Artifact set
+- Typical failure modes
+
 ## Foundation
 
 An agent is NOT a "smart chat". It is a **designed software function** with explicit boundaries, rules, tools, execution cycle, and measurable quality.

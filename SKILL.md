@@ -4,14 +4,14 @@ description: >
   Design, audit, and analyze AI agent systems using IDEF0 functional methodology.
   Use when user wants to: design a new agent or multi-agent system (design),
   audit existing agents against 10 maturity criteria (review),
-  generate an HTML dashboard with infographics (dashboard).
+  generate an HTML dashboard from audit artifacts (dashboard).
   Triggers: "design agent", "audit agents", "agent dashboard", "roleframe",
-  "agent review", "agent infographic", "agent maturity",
+  "agent review", "agent dashboard html", "agent maturity",
   "спроектируй агента", "аудит агентов", "дашборд агентов".
 license: Apache-2.0
 metadata:
   author: welltraum
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # RoleFrame
@@ -32,14 +32,22 @@ Apply these to all generated text — markdown, HTML, any artifact:
 - **No AI filler.** Cut: "важно отметить", "следует подчеркнуть", "рассмотрим", "в рамках данного", "ключевую роль", "является неотъемлемой частью", "давайте рассмотрим".
 - **No promotional language.** Cut: "мощный", "инновационный", "передовой", "уникальный".
 - **No vague positive conclusions.** Replace "будущее выглядит многообещающим" with a specific next step.
-- **Have opinions.** React to what is found, not just report. "Supervisor перегружен — routing-логика, файловая обработка и постобработка результатов смешаны в одном промпте" beats "supervisor имеет некоторые проблемы".
+- **Have opinions.** React to what is found, not just report.
 - **Vary sentence length.** Mix short and long. Short punchy sentences for findings. Longer for context.
-- **Name the problem precisely.** "output contract отсутствует, consumer не может парсить результат программно" beats "контракт слабый".
-- **Active voice.** "добавь output contract в файл X" beats "output contract должен быть добавлен".
+- **Name the problem precisely.** Prefer concrete engineering language.
+- **Active voice.**
 
 ## Core principle
 
 An agent is a **designed software function** with explicit boundaries — not a "smart chat". The minimal unit of design is a **single business function**. If the brief says "agent that does everything", that is a signal to decompose.
+
+## Reference map (load on demand)
+
+Load only what is needed for the current mode:
+
+- Design: [references/methodology.md](references/methodology.md), [references/checklist.md](references/checklist.md), [references/passport-template.md](references/passport-template.md)
+- Review: [references/prompt-archaeology.md](references/prompt-archaeology.md), [references/anti-patterns.md](references/anti-patterns.md), [references/audit-template.md](references/audit-template.md)
+- Dashboard: [assets/dashboard-template.html](assets/dashboard-template.html)
 
 ### IDEF0 model (always apply)
 
@@ -68,7 +76,7 @@ Parse the first word to select mode:
 |---|---|---|
 | `design` | Design new agent(s) from scratch | Description of business task |
 | `review` | Audit existing agents against 10 maturity criteria | Path to agent files (default: `agents/`) |
-| `dashboard` | Generate HTML infographic from audit results | Path to audits (default: `docs/agent_audit/`) |
+| `dashboard` | Generate HTML dashboard from audit results | Path to audits (default: `docs/agent_audit/`) |
 
 If arguments are empty or unrecognized, show help in the detected language with all three modes.
 
@@ -205,23 +213,25 @@ Example:
 - Per-agent audit: `docs/agent_audit/NN_name.md`
 - Summary: `docs/agent_audit/README.md`
 - Number files `01_`, `02_` by hierarchy (supervisor first)
+- Before claiming success, verify that the audit files and `README.md` were actually generated
 - **After writing all audit files, immediately generate the HTML dashboard** — follow the full dashboard generation procedure below (Steps 1–4 of Mode: dashboard). The user should not need to run a separate command after `review`.
 
 ---
 
 ## Mode: dashboard
 
-**This mode rebuilds the HTML from existing audit files.** Use it when audit files already exist and you want to regenerate or update the infographic only — for example after manual edits to audit files, or to refresh after a partial re-review.
+**This mode rebuilds the HTML from existing audit files.** Use it when audit files already exist and you want to regenerate or update the dashboard only — for example after manual edits to audit files, or to refresh after a partial re-review.
 
 If no audit files exist yet — say so and suggest running `/roleframe review` first.
 
 ### Step 1: Read audit data
 - Read all `docs/agent_audit/*.md` (skip README.md)
-- Extract per agent: name, score, 10 criteria values, top deficits, backlog items, tools list, output contract details, key prompt elements, eval examples
+- Extract per agent: name, score, short verdict, IDEF0 summary, 10 criteria values, top deficits, backlog items, key evidence points, anti-patterns, output contract details
 - Additionally load the project methodology source for dashboard onboarding:
-  - If `docs/Инженерия агентов 2026.md` exists, read section `Проектирование Агента` and use it as the primary source for the Methodology view
-  - If that file does not exist, fall back to [references/methodology.md](references/methodology.md) only
-- If an older dashboard exists (for example `docs/agent_audit_old_01/infographic.html`), inspect it for information density and layout cues before rebuilding the new HTML
+  - If `docs/methodology.<lang>.md` exists, use it as the primary source for the Methodology view
+  - Otherwise use `docs/methodology.ru.md` and `docs/methodology.en.md` as bilingual reference sources
+  - If those files do not exist, fall back to [references/methodology.md](references/methodology.md) only
+- If an older dashboard exists (for example `docs/agent_audit_old_01/dashboard.html`), inspect it for information density and layout cues before rebuilding the new HTML
 - If no audits — suggest `/roleframe review` first
 
 ### Step 2: Detect language and set it for the entire HTML
@@ -236,89 +246,71 @@ The template is a single complete HTML file with `{{PLACEHOLDER}}` markers. It c
 **How to generate:**
 
 1. Read `assets/dashboard-template.html` — this is your ONLY template file.
-2. Copy the entire file as the starting point for `infographic.html`.
+2. Copy the entire file as the starting point for `dashboard.html`.
 3. Replace every `{{PLACEHOLDER}}` with real data from the audit files.
-4. For blocks marked `🔁 REPEAT` — duplicate the HTML block once per agent/criterion/item and fill each copy with specific data.
-5. For `{{BLOCKS}}` placeholders that expect generated HTML (like `{{CRITICAL_ISSUES_BLOCKS}}`, `{{ROADMAP_PHASES}}`) — generate the inner HTML following the CSS classes already defined in the template.
+4. Fill the template placeholders with generated HTML blocks and strings. The current template expects these placeholders:
+   - Header and tabs: `{{PAGE_TITLE}}`, `{{DASHBOARD_TITLE}}`, `{{SUBTITLE}}`, `{{TAB_OVERVIEW}}`, `{{TAB_METHODOLOGY}}`, `{{TAB_AGENTS}}`, `{{TAB_ISSUES}}`
+   - Overview: `{{OVERVIEW_SUMMARY_CARDS}}`, `{{ARCHITECTURE_HEADING}}`, `{{ARCHITECTURE_TEXT}}`, `{{MERMAID_ARCHITECTURE}}`, `{{SCORES_HEADING}}`, `{{SCORE_ROWS}}`
+   - Methodology: `{{METHODOLOGY_HEADING}}`, `{{METHODOLOGY_LEAD}}`, `{{METHODOLOGY_LINKS}}`, `{{METHODOLOGY_SUMMARY_BLOCKS}}`
+   - Agents: `{{AGENT_CARDS}}`
+   - Issues & roadmap: `{{CRITICAL_ISSUES_HEADING}}`, `{{CRITICAL_ISSUES_ITEMS}}`, `{{MATURITY_MATRIX_HEADING}}`, `{{MATURITY_MATRIX_HEADER}}`, `{{MATURITY_MATRIX_ROWS}}`, `{{CONTRACT_MATRIX_HEADING}}`, `{{CONTRACT_MATRIX_TEXT}}`, `{{CONTRACT_MATRIX_HEADER}}`, `{{CONTRACT_MATRIX_ROWS}}`, `{{ROADMAP_HEADING}}`, `{{ROADMAP_PHASES}}`
+5. Do not invent extra sections that are not present in the template. Generate dense content inside the existing placeholder blocks.
+6. Before claiming success, verify that `docs/agent_audit/dashboard.html` exists and the four views are non-empty.
 
 **Verification checklist — the output MUST have:**
 - [ ] 4 tab buttons in the header that switch views
-- [ ] `<div id="view-overview">` with score bars, mermaid graph, architecture text
-- [ ] `<div id="view-methodology">` with IDEF0 anatomy, design theory, criteria, checklist, priority
-- [ ] `<div id="view-agents">` with one `<article class="agent-card">` per agent, each containing: header, verdict, IDEF0, 10 criteria, collapsible `<details>` audit sections (§0–§14), findings, backlog, patch plan
-- [ ] `<div id="view-issues">` with critical issues, patterns, maturity heatmap, contract matrix, roadmap
+- [ ] `<section id="view-overview">` with summary cards, mermaid graph, and score rows
+- [ ] `<section id="view-methodology">` with compact onboarding text and links to detailed methodology docs
+- [ ] `<section id="view-agents">` with one dense agent card per agent
+- [ ] `<section id="view-issues">` with critical issues, maturity matrix, contract matrix, and roadmap
 - [ ] None of the four views are empty
 
 The dashboard has **four views**:
 
 **View 1 — Overview (Обзор):**
-- Score bars per agent, each with 10 mini criteria dots (colored by score: 0=red, 1=amber, 2=lime, 3=green) and top deficit label
-- Mermaid architecture graph with edge labels (typed/implicit) and node colors by score
-- Architecture analysis text: orchestration pattern, runtime coupling, handoff quality, single point of failure
-- Score interpretation table (0-10 / 11-20 / 21-25 / 26-30)
+- 3-4 summary cards with overall verdict, average score, number of canonical findings, and top systemic risk
+- Mermaid architecture graph and a short architecture analysis paragraph
+- Score rows for all agents with score bar, maturity label, and one-line top deficit
 
 **View 2 — Methodology onboarding (Методология):**
-- This view must be grounded not only in generic RoleFrame notes but also in `docs/Инженерия агентов 2026.md` section `Проектирование Агента` when present
-- Add a compact but substantive narrative on:
-  - why classical SDLC breaks for agents
+- This view should stay compact and point to the detailed methodology docs in `docs/methodology.ru.md` and `docs/methodology.en.md`
+- Use the methodology docs as the primary source when they exist
+- Include a short lead paragraph explaining that detailed methodology has been moved out of the dashboard for readability
+- Add 2 summary blocks:
+  - what the methodology covers
+  - how to use methodology docs together with the audit package
+- Keep the narrative grounded in:
+  - why agent ≠ LLM
   - the split between engineering and research loops
   - the principle `Агент = бизнес-функция`
-  - why requirements are built around IDEF0, not around "smart assistant" wording
-- IDEF0 anatomy visual with all-quadrants callout (no "magic", no single-quadrant focus)
-- Add a second methodology block that walks through agent design in the exact sequence:
-  - business function
-  - input classes and edge cases
-  - mechanism/tools
-  - control = role + SOP + constraints
-  - output interface as typed schema
-- Deep-dive on each Control component: Identity & Goal (SRP), SOP as state machine, Constraints, Output contract
-- Context engineering patterns: Static vs Dynamic, Write/Select/Compress/Isolate
-- Mention engineering hygiene explicitly: prompt as versioned artifact, modular composition, regression after prompt edits
-- 10 maturity criteria with description + risk of score=0
-- 14-point checklist split by IDEF0 quadrant (Бизнес-функция / Control / Output / Mechanism / Качество)
-- Correction priority order with explanation WHY this sequence
+  - why requirements are built around IDEF0 and typed contracts
 
 **View 3 — Agents (Агенты):**
-Each agent card has two states: **collapsed** (header always visible) and **expanded** (toggled by clicking the header). The onclick handler toggles `hidden` class on `.agent-body`.
+Each agent card should be dense and readable without opening the markdown audit. It must include:
+- **Source links block**: generated audit markdown plus the primary source files used for evidence
+- **Short verdict card**: one short paragraph describing the main engineering problem
+- **IDEF0 summary block**: input / control / mechanism / output in compact form
+- **Evidence block**: 3-4 key evidence points with `file:line`
+- **Criteria table**: criterion, score, and one-line explanation for all 10 maturity criteria
+- **Current vs target contract**: compact code blocks or pseudo-JSON
+- **Anti-patterns / systemic risks**: named tags such as AP-14, AP-15, Free-form output, Safety risk
+- **Backlog table**: action, layer, regression risk, file:line
 
-Collapsed header shows: name, description, score badge, top risk one-liner.
-
-Expanded body must include:
-- **Source links block**: link to the generated audit markdown (`docs/agent_audit/NN_name.md`) and the primary source files used for this agent
-- **Audit excerpt**: 1 short verdict paragraph or 2-3 bullets distilled from the per-agent markdown, so the user can read the card without opening the file
-- **IDEF0 anatomy visual** (anatomy-grid CSS): anatomy-control (purple, top) / anatomy-input+center+output (blue+green, middle) / anatomy-mechanism (orange, bottom) — fill with agent-specific content and file:line references
-- Use the **same visual grammar as in the Methodology view** so the per-agent IDEF0 is immediately comparable with the general model
-- **Tool list**: each tool with name, purpose, rights, and failure strategy
-- **10 criteria grid** with colored cells and **detailed tooltip on each cell**: criterion meaning + specific evidence from audit (cite file:line) + what would score 3
-- **Output contract**: happy path, business-empty, tool-failure — shown as code blocks
-- **Key prompt elements**: 3-5 most important rules from system prompt
-- **Eval examples**: 2-3 representative input→expected-output pairs
-- **Tool call sequence diagram** (mermaid sequenceDiagram): if the prompt implies call order, visualize it; annotate steps without error handling with `Note`; omit if not recoverable
-- **Anti-patterns detected** (AP-N labels) with evidence quote, file:line, risk
-- Regression risk summary badges
-- Findings: Сильные стороны / Требует улучшения / Критично
-- Бэклог: priority badge + regression risk badge per item
-- Good / Needs work / Critical grouped findings
-- Backlog with file:line links and regression risk badge per item
+The current template does not support collapsible sub-sections. Do not describe or expect them in the generated output.
 
 **View 4 — Issues & Roadmap (Проблемы и роадмап):**
-- **Critical issues section**: show the 3-5 most dangerous systemic issues first, in the style of an executive risk summary
-- **Common problem patterns**: grouped patterns across agents, not just a flat issue list
-- **Agent maturity matrix**: agents as rows, 10 maturity criteria as columns, colored heatmap with tooltip per cell; this is separate from the contract matrix and should make weak clusters visible at a glance
-- Cross-agent findings
-- **Cross-agent contract matrix**: table where rows = source agents, columns = consumer agents, cells = contract type (`typed` / `implicit` / `absent` / `n/a`)
-  - `typed` = an explicit machine-readable schema or structured payload is visible
-  - `implicit` = a real handoff exists, but payload is free-form text
-  - `absent` = a direct handoff exists or is implied architecturally, but the contract is not defined
-  - `n/a` = no direct agent-to-agent handoff is intended
-  - Every tooltip must explain: what connection exists, what payload is passed today, where the evidence is (`file:line`), whether the consumer can parse it programmatically, what the risk is, and what a typed target contract would look like
-  - Do not leave the meaning of the matrix to inference; add a plain-language explainer block above it
-- Top issues ranked by risk (include detected AP-N anti-patterns as named issues)
-- Phased roadmap: function+contract → control → mechanism → evaluation → operations
-- Each item: priority badge, regression risk badge (Safe/Breaking/Behavioural), action, file:line
+- **Critical issues section**: 3-5 most dangerous systemic problems first
+- **Maturity matrix**: compact table with agents as rows and selected weak dimensions visible at a glance
+- **Cross-agent contract matrix**: rows = source agents, columns = consumer agents, cells = `typed` / `implicit` / `absent` / `n/a`
+  - `typed` = explicit machine-readable schema is visible
+  - `implicit` = handoff exists, but the payload is free-form text
+  - `absent` = a direct handoff is expected but the contract is not defined
+  - `n/a` = no direct handoff is intended
+- **Roadmap**: phased sequence `function + contract → runtime + safety → eval + observability`
+- Keep this view executive and scannable. The dashboard should highlight patterns, not duplicate the full markdown audits.
 
 ### Step 4: Write output
-Save to `docs/agent_audit/infographic.html` and report the path.
+Save to `docs/agent_audit/dashboard.html` and report the path.
 
 ---
 

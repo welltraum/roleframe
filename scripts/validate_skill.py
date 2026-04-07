@@ -23,6 +23,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_PATH = ROOT / "SKILL.md"
 EVALS_PATH = ROOT / "evals" / "evals.json"
+RENDER_EVAL_DOCS_PATH = ROOT / "scripts" / "render_eval_docs.py"
 
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
@@ -178,6 +179,17 @@ def run_skills_ref() -> tuple[bool, str]:
     return completed.returncode == 0, output
 
 
+def check_generated_eval_docs() -> tuple[bool, str]:
+    completed = subprocess.run(
+        [sys.executable, str(RENDER_EVAL_DOCS_PATH), "--check"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    output = "\n".join(part for part in [completed.stdout.strip(), completed.stderr.strip()] if part).strip()
+    return completed.returncode == 0, output
+
+
 def main() -> int:
     args = parse_args()
     errors: list[str] = []
@@ -192,6 +204,12 @@ def main() -> int:
     validate_frontmatter(frontmatter, errors, warnings)
     validate_links(errors)
     validate_evals(frontmatter, errors)
+
+    ok, output = check_generated_eval_docs()
+    if not ok:
+        errors.append("Generated eval docs are out of date; run scripts/render_eval_docs.py")
+    if output:
+        print(output)
 
     if not args.skip_skills_ref:
         ok, output = run_skills_ref()

@@ -1,3 +1,4 @@
+<!-- Generated from evals/evals.json by scripts/render_eval_docs.py. Do not edit manually. -->
 # Trigger Tests
 
 Verify that `/roleframe` activates on relevant queries and does NOT activate on unrelated ones.
@@ -9,30 +10,30 @@ Verify that `/roleframe` activates on relevant queries and does NOT activate on 
 | 1 | `/roleframe design Agent for processing product return requests` | design |
 | 2 | `/roleframe review agents/1c` | review |
 | 3 | `/roleframe dashboard` | dashboard |
-| 4 | `Спроектируй агента для обработки заявок` | design (auto-trigger) |
-| 5 | `Проведи аудит агентов` | review (auto-trigger) |
-| 6 | `Собери дашборд агентов` | dashboard (auto-trigger) |
-| 7 | `/roleframe review` (no path) | review with auto-discovery |
-| 8 | `/roleframe` (no args) | help message |
-| 9 | `I need to design a multi-agent system for customer support` | design (auto-trigger) |
-| 10 | `Audit the agent maturity` | review (auto-trigger) |
+| 4 | `Спроектируй агента для обработки заявок` | design |
+| 5 | `Проведи аудит агентов` | review |
+| 6 | `Собери дашборд агентов` | dashboard |
+| 7 | `/roleframe review` | review |
+| 8 | `/roleframe` | help |
+| 9 | `I need to design a multi-agent system for customer support` | design |
+| 10 | `Audit the agent maturity` | review |
 
 ## Should NOT trigger
 
 | # | Query | Why not |
 |---|---|---|
-| 1 | `Write a Python script for data processing` | Code task, not agent design |
-| 2 | `Fix the bug in supervisor.py` | Bug fix, not methodology |
-| 3 | `Create a dashboard for sales metrics` | Generic dashboard, not agent audit |
-| 4 | `What is IDEF0?` | Informational question, not skill action |
-| 5 | `Help me with my 1C configuration` | Domain task, not agent design |
+| 1 | `Write a Python script for data processing` | The skill must not activate. The task should be handled as a normal coding request. |
+| 2 | `Fix the bug in supervisor.py` | The skill must not activate. |
+| 3 | `Create a dashboard for sales metrics` | The skill must not activate because the request is not about agent audits. |
+| 4 | `What is IDEF0?` | The skill must not auto-activate because this is an informational question. |
+| 5 | `Help me with my 1C configuration` | The skill must not activate because the request is domain support, not agent design. |
 
 ## How to test
 
-1. Start a fresh Claude Code session in this project
-2. Run each query from "Should trigger" -- verify skill loads and correct mode is selected
-3. Run each query from "Should NOT trigger" -- verify skill does NOT load
-4. Record results in the table below
+1. Start a fresh Codex session in this project.
+2. Run each query from `Should trigger` and verify the mode selection.
+3. Run each query from `Should NOT trigger` and verify the skill does not hijack the task.
+4. Save the raw response into the matching `outputs/response.md` file before grading.
 
 ## Results log
 

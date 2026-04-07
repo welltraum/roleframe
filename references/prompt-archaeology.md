@@ -1,5 +1,16 @@
 # Prompt archaeology
 
+## Quick map
+
+- Role reconstruction
+- SOP reconstruction
+- Constraints
+- Output contract
+- Mechanism map
+- Function test
+- Context budget check
+- Final reconstruction sentence
+
 Use this guide when auditing agents that were **not built with IDEF0 in mind** — agents where there is no formal structure, only a monolithic prompt and a frontmatter with toolkits.
 
 The goal: reconstruct the implicit IDEF0 from the prompt text, then use the gap between "what the prompt implies" and "what IDEF0 requires" as the audit finding.

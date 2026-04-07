@@ -69,39 +69,60 @@ roleframe/
 │   └── prompt-archaeology.md
 ├── evals/
 │   ├── evals.json
+│   ├── expected-findings.md
 │   ├── functional-tests.md
 │   ├── grading-rubric.md
 │   ├── performance-comparison.md
+│   ├── review-dashboard-runbook.md
 │   ├── trigger-tests.md
 │   └── files/
 │       ├── sample-agents/
 │       └── sample-audits/
 ├── scripts/
 │   ├── benchmark_eval.py
+│   ├── check_eval_artifacts.py
 │   ├── prepare_eval.py
+│   ├── render_eval_docs.py
 │   └── validate_skill.py
 └── eval-workspace/
 ```
 
 ## Evaluation workflow
 
-The canonical eval source is `evals/evals.json`. The markdown files in `evals/` stay as human-readable supporting docs.
+The canonical eval source is `evals/evals.json`. The markdown files in `evals/` are generated human-readable views and should be refreshed from that source.
 
 Recommended loop:
 
 ```bash
-# 1. Structural validation
-uv run scripts/validate_skill.py
+# 1. Structural validation with workspace-local uv caches
+UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
+  uv run scripts/validate_skill.py --skip-skills-ref
 
-# 2. Prepare a clean iteration workspace
-uv run scripts/prepare_eval.py --iteration 1
+# 2. Refresh generated eval docs if evals.json changed
+UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
+  uv run scripts/render_eval_docs.py
 
-# 3. Run fresh with-skill / without-skill sessions in Claude Code
+# 3. Prepare a clean iteration workspace
+UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
+  uv run scripts/prepare_eval.py --iteration 1 --wave 1
+
+# 4. Run fresh with-skill / without-skill sessions in Codex
 #    and save outputs into eval-workspace/iteration-1/.../outputs
+#    Raw response goes to outputs/response.md
 
-# 4. Add timing.json and grading.json per run, then aggregate
-uv run scripts/benchmark_eval.py --iteration-dir eval-workspace/iteration-1
+# 5. Verify required artifacts and content checks before grading
+UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
+  uv run scripts/check_eval_artifacts.py --iteration-dir eval-workspace/iteration-1
+
+# 6. Replace pending grading.json and timing.json templates, then aggregate
+UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
+  uv run scripts/benchmark_eval.py --iteration-dir eval-workspace/iteration-1
 ```
+
+Canonical review/dashboard runbook:
+
+- [`evals/review-dashboard-runbook.md`](evals/review-dashboard-runbook.md)
+- [`evals/expected-findings.md`](evals/expected-findings.md)
 
 Evaluation follows the [Agent Skills guidance on structured evals](https://agentskills.io/skill-creation/evaluating-skills):
 
@@ -111,6 +132,14 @@ Evaluation follows the [Agent Skills guidance on structured evals](https://agent
 - timing and token capture
 - assertion grading
 - human blind review for qualitative differences
+- artifact completeness before grading
+- fast-model plus reasoning-model spot checks for regression drift
+
+First-cycle release work uses a risk-based order:
+
+- wave 1: all trigger cases, `functional-design-d1`, `functional-design-d3`, `functional-review-r1`,
+  `functional-dashboard-b1`, `functional-dashboard-b2`, and `comparison-b`
+- wave 2: the remaining functional and comparison cases after wave 1 is healthy
 
 ## Validation
 
@@ -130,10 +159,18 @@ The custom validator checks:
 - approximate token budget for `SKILL.md`
 - broken relative links from `SKILL.md` and `references/*.md`
 - shape of `evals/evals.json`
+- generated eval docs are in sync with `evals/evals.json`
+
+`scripts/check_eval_artifacts.py` verifies the manual eval outputs that the benchmark depends on:
+
+- raw response export
+- audit markdown package for `review`
+- `dashboard.html` for `review` and `dashboard`
+- minimal content signals such as evidence references in review artifacts and HTML smoke checks for dashboards
 
 ## Release policy
 
-`v0.1.0` is considered releasable only when all of the following are true:
+`v0.2.0` is considered releasable only when all of the following are true:
 
 - `skills-ref validate .` passes
 - `uv run scripts/validate_skill.py` passes

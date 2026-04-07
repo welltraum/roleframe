@@ -1,5 +1,19 @@
 # Шаблон архитектурного аудита агента
 
+## Быстрая карта разделов
+
+- Принцип аудита
+- Правила оформления
+- Формат доказательства
+- Карта артефактов
+- Граница ответственности
+- Минимальная бизнес-функция
+- IDEF0 и Input/Output
+- Control
+- Mechanism / runtime
+- Traceability, eval, operations, change management
+- Конфликты, scoring, backlog, patch plan, verdict
+
 Используй для генерации файла аудита. Путь: `docs/agent_audit/NN_name.md`.
 
 ## Принцип аудита

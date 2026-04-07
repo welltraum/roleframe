@@ -224,20 +224,22 @@
     {
       "id": "functional-review-r1",
       "prompt": "/roleframe review evals/files/sample-agents/agents",
-      "expected_output": "A full review over the fixture agents with evidence-driven findings.",
+      "expected_output": "A full review over the fixture agents with evidence-driven findings, audit markdown files, and a dashboard build.",
       "files": [
         "evals/files/sample-agents/agents/supervisor.md",
         "evals/files/sample-agents/agents/document-finder.md",
         "evals/files/sample-agents/agents/response-drafter.md",
         "evals/files/sample-agents/prompts/agents/supervisor.txt",
-        "evals/files/sample-agents/src/tools/factory.py"
+        "evals/files/sample-agents/src/tools/factory.py",
+        "evals/expected-findings.md"
       ],
       "assertions": [
         "The response discovers all fixture agent files.",
         "The response resolves the placeholder include used by the supervisor fixture.",
         "The response cites concrete file paths or file:line evidence.",
         "The response scores maturity criteria or uses an explicit audit rubric.",
-        "The response includes cross-agent analysis or overlap findings."
+        "The response includes cross-agent analysis or overlap findings.",
+        "The response creates or clearly intends an audit package and dashboard HTML as review artifacts."
       ],
       "tags": ["functional", "review"]
     },
@@ -256,7 +258,7 @@
     {
       "id": "functional-review-r3",
       "prompt": "/roleframe review evals/files/sample-agents/agents/supervisor.md",
-      "expected_output": "The skill reviews a single agent artifact deeply instead of scanning the full set.",
+      "expected_output": "The skill reviews a single agent artifact deeply, still using the audit structure and still producing review artifacts.",
       "files": [
         "evals/files/sample-agents/agents/supervisor.md",
         "evals/files/sample-agents/prompts/agents/supervisor.txt"
@@ -264,7 +266,8 @@
       "assertions": [
         "The response scopes the review to the supplied file.",
         "The response still applies the audit structure.",
-        "The response still includes evidence and checklist-style findings."
+        "The response still includes evidence and checklist-style findings.",
+        "The response still treats review as an artifact-producing workflow rather than a one-off text critique."
       ],
       "tags": ["functional", "review", "single-agent"]
     },
@@ -281,7 +284,7 @@
       "assertions": [
         "The response reads audit markdown files as input.",
         "The response references the bundled HTML template.",
-        "The output target is docs/agent_audit/infographic.html.",
+        "The output target is docs/agent_audit/dashboard.html.",
         "The response expects overview, methodology, agents, and issues views.",
         "The response does not generate an unrelated dashboard structure."
       ],
