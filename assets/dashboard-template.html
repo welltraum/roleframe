@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, .mono { font-family: 'JetBrains Mono', monospace; }
+        .score-bar { transition: width 0.6s ease-in-out; }
+        .agent-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .agent-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .good { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .normal { background-color: #fef3c7; border-color: #f59e0b; color: #92400e; }
+        .danger { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .mermaid { background: transparent !important; }
+        .tab-active { background-color: #1d4ed8; color: white; }
+        .tab-inactive { background-color: #e5e7eb; color: #374151; }
+        .tab-inactive:hover { background-color: #d1d5db; }
+        .file-link { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #6366f1; background: #eef2ff; padding: 1px 4px; border-radius: 3px; }
+        .risk-safe { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
+        .risk-breaking { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        .risk-behavioural { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+        .contract-typed { background: #dcfce7; color: #166534; }
+        .contract-implicit { background: #fef3c7; color: #92400e; }
+        .contract-absent { background: #fee2e2; color: #991b1b; }
+        .has-tooltip { position: relative; cursor: help; }
+        .has-tooltip .tooltip {
+            visibility: hidden; opacity: 0;
+            position: absolute; z-index: 50; bottom: calc(100% + 6px); left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b; color: #f1f5f9; font-size: 0.7rem; line-height: 1.5;
+            padding: 8px 10px; border-radius: 6px; width: 220px; text-align: left;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            transition: opacity 0.15s ease; pointer-events: none;
+        }
+        .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
+        .has-tooltip .tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%;
+            transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1e293b;
+        }
+        .anatomy-control { background: #f5f3ff; border: 1.5px solid #8b5cf6; border-radius: 8px 8px 0 0; }
+        .anatomy-row { display: flex; align-items: stretch; }
+        .anatomy-input { background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 8px 0 0 8px; flex: 1; }
+        .anatomy-center { background: #f0fdf4; border: 1.5px solid #22c55e; flex: 0 0 140px; display: flex; align-items: center; justify-content: center; }
+        .anatomy-output { background: #f0fdf4; border: 1.5px solid #22c55e; border-radius: 0 8px 8px 0; flex: 1; }
+        .anatomy-mechanism { background: #fff7ed; border: 1.5px solid #f97316; border-radius: 0 0 8px 8px; border-top: none; }
+        .audit-section summary {
+            cursor: pointer; user-select: none; font-size: 0.8rem; font-weight: 600; color: #334155;
+            padding: 10px 0; border-bottom: 1px solid #f1f5f9; list-style: none;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .audit-section summary::-webkit-details-marker { display: none; }
+        .audit-section summary::before { content: '▸'; display: inline-block; transition: transform 0.15s ease; color: #94a3b8; font-size: 0.65rem; width: 10px; }
+        .audit-section[open] summary::before { transform: rotate(90deg); }
+        .audit-section .section-body { padding: 10px 0 6px 16px; }
+        .audit-section .evidence-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin: 6px 0; font-size: 0.7rem; }
+        .audit-section .evidence-block .ev-label { font-weight: 600; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 2px; }
+        .audit-section .evidence-block pre { background: #1e293b; color: #e2e8f0; padding: 8px 10px; border-radius: 6px; margin: 4px 0; overflow-x: auto; font-size: 0.7rem; line-height: 1.5; }
+        .audit-section .verdict { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; color: #854d0e; margin-top: 8px; }
+        .audit-section table { width: 100%; font-size: 0.7rem; border-collapse: collapse; }
+        .audit-section th { text-align: left; padding: 6px 8px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #475569; }
+        .audit-section td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">{{DASHBOARD_TITLE}}</h1>
+                <p class="text-xs text-slate-400 mt-0.5">{{SUBTITLE}}</p>
+            </div>
+            <nav class="flex gap-1.5 flex-wrap">
+                <button onclick="showView('overview')" id="btn-overview" class="px-3 py-1.5 text-sm font-medium rounded-lg tab-active transition">{{TAB_OVERVIEW}}</button>
+                <button onclick="showView('methodology')" id="btn-methodology" class="px-3 py-1.5 text-sm font-medium rounded-lg tab-inactive transition">{{TAB_METHODOLOGY}}</button>
+                <button onclick="showView('agents')" id="btn-agents" class="px-3 py-1.5 text-sm font-medium rounded-lg tab-inactive transition">{{TAB_AGENTS}}</button>
+                <button onclick="showView('issues')" id="btn-issues" class="px-3 py-1.5 text-sm font-medium rounded-lg tab-inactive transition">{{TAB_ISSUES}}</button>
+            </nav>
+        </div>
+    </div>
+</header>
+
+
+<!-- ======================= VIEW 1: OVERVIEW ======================= -->
+<div id="view-overview" class="view max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Score levels legend -->
+    <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-3">{{HEADING_SCORE_LEVELS}}</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="p-3 rounded-xl danger border text-center"><div class="text-lg font-bold">0–10</div><div class="text-xs font-medium mt-0.5">{{LEVEL_EXPERIMENT}}</div></div>
+            <div class="p-3 rounded-xl normal border text-center"><div class="text-lg font-bold">11–20</div><div class="text-xs font-medium mt-0.5">{{LEVEL_PROTOTYPE}}</div></div>
+            <div class="p-3 rounded-xl bg-sky-50 border border-sky-300 text-sky-900 text-center"><div class="text-lg font-bold">21–25</div><div class="text-xs font-medium mt-0.5">{{LEVEL_MANAGED}}</div></div>
+            <div class="p-3 rounded-xl good border text-center"><div class="text-lg font-bold">26–30</div><div class="text-xs font-medium mt-0.5">{{LEVEL_MATURE}}</div></div>
+        </div>
+    </div>
+
+    <!-- Architecture diagram + analysis -->
+    <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-2">{{HEADING_ARCHITECTURE}}</h2>
+        <p class="text-sm text-slate-600 mb-4">{{ARCHITECTURE_ANALYSIS_TEXT}}</p>
+        <div class="mermaid">{{MERMAID_ARCHITECTURE}}</div>
+    </div>
+
+    <!-- Score bars — 🔁 ПОВТОРИ блок ниже для каждого агента -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h2 class="text-base font-semibold text-slate-900 mb-5">{{HEADING_MATURITY_SCORES}}</h2>
+        <div class="space-y-5">
+
+            <!-- 🔁 START agent score bar (повтори для каждого агента) -->
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="font-medium text-slate-900 text-sm">{{AGENT_NAME}}</span>
+                    <span class="text-xs text-slate-500">{{SCORE}}/30 — {{LEVEL_LABEL}}</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2 mb-2">
+                    <div class="score-bar {{SCORE_COLOR}} h-2 rounded-full" style="width: {{PERCENT}}%"></div>
+                </div>
+                <div class="flex gap-1 items-center">
+                    <!-- 10 mini dots: bg-green-500 (3), bg-lime-400 (2), bg-amber-400 (1), bg-red-400 (0) -->
+                    <div class="has-tooltip h-3 w-3 rounded-full {{DOT_COLOR}} shrink-0"><div class="tooltip">{{CRITERION_NAME}}: {{CRITERION_SCORE}}/3 — {{ONE_LINE}}</div></div>
+                    <!-- повтори .has-tooltip для всех 10 критериев -->
+                    <span class="text-xs text-slate-400 ml-1">{{TOP_DEFICIT}}</span>
+                </div>
+            </div>
+            <!-- 🔁 END agent score bar -->
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ======================= VIEW 2: METHODOLOGY ======================= -->
+<div id="view-methodology" class="view max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+
+    <!-- IDEF0 anatomy + deep explanations -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-2">{{HEADING_IDEF0}}</h2>
+        <p class="text-sm text-slate-500 mb-5">{{IDEF0_INTRO}}</p>
+        <div class="max-w-xl mx-auto text-sm mb-6">
+            <div class="anatomy-control p-3 mb-0">
+                <div class="font-semibold text-purple-800 text-xs uppercase tracking-wide mb-1">Control</div>
+                <div class="text-purple-700">{{CONTROL_EXPLANATION}}</div>
+            </div>
+            <div class="anatomy-row">
+                <div class="anatomy-input p-3"><div class="font-semibold text-blue-800 text-xs uppercase tracking-wide mb-1">Input</div><div class="text-blue-700">{{INPUT_EXPLANATION}}</div></div>
+                <div class="anatomy-center px-3 py-4"><div class="font-bold text-green-800 text-sm">{{FUNCTION_LABEL}}</div><div class="text-green-600 text-xs mt-1">{{AGENT_LABEL}}</div></div>
+                <div class="anatomy-output p-3"><div class="font-semibold text-green-800 text-xs uppercase tracking-wide mb-1">Output</div><div class="text-green-700">{{OUTPUT_EXPLANATION}}</div></div>
+            </div>
+            <div class="anatomy-mechanism p-3">
+                <div class="font-semibold text-orange-800 text-xs uppercase tracking-wide mb-1">Mechanism</div>
+                <div class="text-orange-700">{{MECHANISM_EXPLANATION}}</div>
+            </div>
+        </div>
+
+        <!-- All-quadrants callout -->
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 mb-6">
+            <p class="font-semibold mb-2">{{QUADRANTS_CALLOUT_TITLE}}</p>
+            <ul class="space-y-1 text-xs text-slate-600">
+                <li><span class="text-blue-600 font-medium">Input:</span> {{INPUT_WHY}}</li>
+                <li><span class="text-purple-600 font-medium">Control:</span> {{CONTROL_WHY}}</li>
+                <li><span class="text-orange-600 font-medium">Mechanism:</span> {{MECHANISM_WHY}}</li>
+                <li><span class="text-green-600 font-medium">Output:</span> {{OUTPUT_WHY}}</li>
+            </ul>
+        </div>
+
+        <!-- Control deep-dive: 4 cards -->
+        <h3 class="font-semibold text-slate-900 text-sm mb-3">{{HEADING_CONTROL_DEEPDIVE}}</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 text-sm">
+            <div class="rounded-xl border border-purple-100 bg-purple-50 p-4">
+                <div class="font-semibold text-purple-900 mb-1">Identity & Goal</div>
+                <div class="text-purple-700 text-xs">{{IDENTITY_GOAL_TEXT}}</div>
+            </div>
+            <div class="rounded-xl border border-purple-100 bg-purple-50 p-4">
+                <div class="font-semibold text-purple-900 mb-1">SOP</div>
+                <div class="text-purple-700 text-xs">{{SOP_TEXT}}</div>
+            </div>
+            <div class="rounded-xl border border-purple-100 bg-purple-50 p-4">
+                <div class="font-semibold text-purple-900 mb-1">Constraints</div>
+                <div class="text-purple-700 text-xs">{{CONSTRAINTS_TEXT}}</div>
+            </div>
+            <div class="rounded-xl border border-purple-100 bg-purple-50 p-4">
+                <div class="font-semibold text-purple-900 mb-1">Output contract</div>
+                <div class="text-purple-700 text-xs">{{OUTPUT_CONTRACT_TEXT}}</div>
+            </div>
+        </div>
+
+        <!-- Context engineering: 2 cards -->
+        <h3 class="font-semibold text-slate-900 text-sm mb-3">{{HEADING_CONTEXT_DEEPDIVE}}</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div class="rounded-xl border border-orange-100 bg-orange-50 p-3">
+                <div class="font-semibold text-orange-900 text-xs mb-1">Static vs Dynamic</div>
+                <div class="text-orange-700 text-xs">{{STATIC_DYNAMIC_TEXT}}</div>
+            </div>
+            <div class="rounded-xl border border-orange-100 bg-orange-50 p-3">
+                <div class="font-semibold text-orange-900 text-xs mb-1">Write / Select / Compress / Isolate</div>
+                <div class="text-orange-700 text-xs">{{WSCI_TEXT}}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent design theory -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-2">{{HEADING_AGENT_DESIGN}}</h2>
+        <p class="text-sm text-slate-500 mb-5">{{AGENT_DESIGN_SOURCE_NOTE}}</p>
+        {{AGENT_DESIGN_BLOCKS}}
+        <!-- Сгенерируй 3 блока:
+             1) Почему ломается классический SDLC (2-4 карточки)
+             2) Два контура разработки: Engineering loop + Research loop (две карточки side-by-side)
+             3) Агент = бизнес-функция: шаги проектирования по IDEF0 (5 шагов) -->
+    </div>
+
+    <!-- 10 criteria reference -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-4">{{HEADING_10_CRITERIA}}</h2>
+        <div class="space-y-2">
+            <!-- 🔁 ПОВТОРИ для каждого из 10 критериев -->
+            <div class="flex gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50">
+                <div class="text-slate-400 font-mono text-sm font-bold w-6 shrink-0">{{N}}</div>
+                <div>
+                    <div class="font-medium text-slate-900 text-sm">{{CRITERION_NAME}}</div>
+                    <div class="text-xs text-slate-600 mt-0.5">{{CRITERION_DESC}}</div>
+                    <div class="text-xs text-red-500 mt-0.5">{{CRITERION_ZERO_RISK}}</div>
+                </div>
+            </div>
+            <!-- /🔁 -->
+        </div>
+    </div>
+
+    <!-- 14-point checklist by IDEF0 quadrant -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-4">{{HEADING_CHECKLIST}}</h2>
+        <!-- 5 groups: Бизнес-функция (#1-2), Control (#3-5), Output (#6), Mechanism (#7-10), Качество (#11-14) -->
+        {{CHECKLIST_BY_QUADRANT}}
+    </div>
+
+    <!-- Correction priority -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-1">{{HEADING_CORRECTION_PRIORITY}}</h2>
+        <p class="text-xs text-slate-400 mb-4">{{CORRECTION_PRIORITY_WHY}}</p>
+        <div class="space-y-2">
+            <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs"><span class="font-semibold text-red-900">1. {{PRIORITY_1_TITLE}}</span><span class="text-red-700 ml-1">{{PRIORITY_1_DESC}}</span></div>
+            <div class="rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs"><span class="font-semibold text-orange-900">2. {{PRIORITY_2_TITLE}}</span><span class="text-orange-700 ml-1">{{PRIORITY_2_DESC}}</span></div>
+            <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs"><span class="font-semibold text-yellow-900">3. {{PRIORITY_3_TITLE}}</span><span class="text-yellow-700 ml-1">{{PRIORITY_3_DESC}}</span></div>
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs"><span class="font-semibold text-blue-900">4. {{PRIORITY_4_TITLE}}</span><span class="text-blue-700 ml-1">{{PRIORITY_4_DESC}}</span></div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs"><span class="font-semibold text-emerald-900">5. {{PRIORITY_5_TITLE}}</span><span class="text-emerald-700 ml-1">{{PRIORITY_5_DESC}}</span></div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ======================= VIEW 3: AGENTS ======================= -->
+<div id="view-agents" class="view max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+
+<!-- 🔁 START agent card — ПОВТОРИ ВЕСЬ <article> для каждого агента из аудита -->
+<article class="agent-card bg-white rounded-2xl shadow-sm mb-4 border border-slate-100 overflow-hidden">
+
+    <!-- Collapsed header (всегда виден) -->
+    <div class="flex items-center justify-between p-5 cursor-pointer select-none"
+         onclick="this.parentElement.querySelector('.agent-body').classList.toggle('hidden')">
+        <div class="flex items-center gap-3">
+            <div class="px-2 py-0.5 rounded-full text-xs font-bold {{BADGE_CLASS}} border">{{SCORE}}/30</div>
+            <div>
+                <h2 class="text-base font-semibold text-slate-900">{{AGENT_NAME}}</h2>
+                <p class="text-xs text-slate-400 mt-0.5">{{AGENT_DESC}}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 hidden sm:block">{{TOP_RISK}}</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+    </div>
+    <!-- BADGE_CLASS: good if >=21, normal if >=11, danger if <11 -->
+
+    <!-- Expanded body -->
+    <div class="agent-body hidden px-5 pb-6 border-t border-slate-100">
+
+        <!-- Links to audit sources -->
+        <div class="mt-4 mb-3 flex flex-wrap gap-2 text-xs">
+            <a class="file-link" href="{{AUDIT_MD_PATH}}">{{LINK_AUDIT}}</a>
+            <a class="file-link" href="{{AGENT_SOURCE_PATH}}">{{LINK_PROMPT}}</a>
+        </div>
+
+        <!-- §17 Verdict — сразу как резюме -->
+        <div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <strong>{{VERDICT_LABEL}}:</strong> {{VERDICT_TEXT}}
+        </div>
+
+        <!-- IDEF0 anatomy visual -->
+        <div class="mb-5">
+            <h3 class="font-semibold text-slate-900 text-xs uppercase tracking-wide mb-3">IDEF0</h3>
+            <div class="text-xs max-w-2xl">
+                <div class="anatomy-control p-2.5 mb-0">
+                    <div class="font-semibold text-purple-800 text-xs mb-0.5">Control</div>
+                    <div class="text-purple-700">{{AGENT_CONTROL}} — <span class="file-link">{{CONTROL_FILE}}</span></div>
+                </div>
+                <div class="anatomy-row">
+                    <div class="anatomy-input p-2.5">
+                        <div class="font-semibold text-blue-800 text-xs mb-0.5">Input</div>
+                        <div class="text-blue-700">{{AGENT_INPUT}}</div>
+                    </div>
+                    <div class="anatomy-center px-2 py-3 text-center">
+                        <div class="font-bold text-green-800 text-xs">{{AGENT_FUNCTION}}</div>
+                        <div class="text-green-600 text-xs mt-0.5">{{AGENT_NAME}}</div>
+                    </div>
+                    <div class="anatomy-output p-2.5">
+                        <div class="font-semibold text-green-800 text-xs mb-0.5">Output</div>
+                        <div class="text-green-700">{{AGENT_OUTPUT}}</div>
+                    </div>
+                </div>
+                <div class="anatomy-mechanism p-2.5">
+                    <div class="font-semibold text-orange-800 text-xs mb-0.5">Mechanism</div>
+                    <div class="text-orange-700">{{AGENT_MECHANISM}}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10 criteria grid -->
+        <div class="mb-5">
+            <h3 class="font-semibold text-slate-900 text-sm mb-2">{{HEADING_CRITERIA}}</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs">
+                <!-- 🔁 повтори для каждого из 10 критериев -->
+                <div class="has-tooltip {{CRIT_COLOR}} border rounded-lg p-2 text-center cursor-help">
+                    {{CRIT_SHORT}}: {{CRIT_SCORE}}/3
+                    <div class="tooltip" style="width:280px">
+                        <strong>{{CRIT_FULL}}</strong><br><br>
+                        <span class="opacity-80">{{LBL_WHY_SCORE}}:</span> {{EVIDENCE}}<br>
+                        <span class="opacity-80">{{LBL_FOR_3}}:</span> {{WHAT_FOR_3}}<br>
+                        <span class="opacity-60 mt-1 block">0 нет · 1 частично · 2 реализовано · 3 проверяется</span>
+                    </div>
+                </div>
+                <!-- /🔁 CRIT_COLOR: good if >=2, normal if ==1, danger if ==0 -->
+            </div>
+        </div>
+
+        <!-- Collapsible audit sections -->
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§0</span> {{SEC_ARTIFACT_MAP}}</summary>
+            <div class="section-body">
+                <table><thead><tr><th>{{TH_TYPE}}</th><th>{{TH_FILE}}</th><th>{{TH_ROLE}}</th><th>{{TH_LAYER}}</th><th>{{TH_CRITICALITY}}</th></tr></thead>
+                <tbody>{{ARTIFACT_ROWS}}</tbody></table>
+                <div class="verdict">{{ARTIFACT_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§1-2</span> {{SEC_BOUNDARY}}</summary>
+            <div class="section-body">
+                <div class="text-xs text-slate-700 mb-2"><strong>{{LBL_ACTUAL_FUNC}}:</strong> {{ACTUAL_FUNC}}</div>
+                <div class="text-xs text-slate-700 mb-2"><strong>{{LBL_MINIMAL_FUNC}}:</strong> {{MINIMAL_FUNC}}</div>
+                <div class="evidence-block">
+                    <div class="ev-label">{{EVIDENCE_TYPE}} · {{LAYER_LABEL}}</div>
+                    <div class="text-xs text-slate-600">{{LBL_SOURCE}}: <span class="file-link">{{SOURCE_REF}}</span></div>
+                    <pre>{{QUOTE}}</pre>
+                </div>
+                <div class="verdict">{{BOUNDARY_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§3a</span> {{SEC_INPUT}}</summary>
+            <div class="section-body">
+                <div class="text-xs mb-2"><strong>{{LBL_EXPLICIT}}:</strong> {{INPUT_EXPLICIT}}</div>
+                <div class="text-xs mb-2"><strong>{{LBL_IMPLICIT}}:</strong> {{INPUT_IMPLICIT}}</div>
+                <div class="verdict">{{INPUT_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§3b</span> {{SEC_OUTPUT_CONTRACT}}</summary>
+            <div class="section-body">
+                <table><thead><tr><th>{{TH_PATH}}</th><th>{{TH_DESCRIBED}}</th><th>{{TH_FORMAT}}</th><th>{{TH_CONSUMER}}</th><th>{{TH_VALIDATION}}</th></tr></thead>
+                <tbody>{{OUTPUT_PATHS_ROWS}}</tbody></table>
+                <div class="verdict">{{OUTPUT_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§4</span> {{SEC_CONTROL}}</summary>
+            <div class="section-body">
+                <div class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">4a. {{SEC_ROLE}}</div>
+                <div class="text-xs text-slate-700 mb-3">{{ROLE_ANALYSIS}}</div>
+                <div class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">4b. SOP</div>
+                <div class="text-xs text-slate-700 mb-3">{{SOP_ANALYSIS}}</div>
+                <div class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">4c. {{SEC_CONSTRAINTS}}</div>
+                <div class="text-xs text-slate-700 mb-3">{{CONSTRAINTS_ANALYSIS}}</div>
+                <div class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">4d. Decision rules</div>
+                <div class="text-xs text-slate-700 mb-3">{{DECISION_RULES}}</div>
+                <div class="verdict">{{CONTROL_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§5</span> {{SEC_MECHANISM}}</summary>
+            <div class="section-body">
+                <div class="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-2">5a. {{SEC_COMPOSITION}}</div>
+                <table class="mb-3"><thead><tr><th>Tool</th><th>Wrapper</th><th>{{TH_RIGHTS}}</th><th>{{TH_IO}}</th><th>{{TH_ERROR}}</th></tr></thead>
+                <tbody>{{TOOLS_ROWS}}</tbody></table>
+                <div class="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-2 mt-4">5b. {{SEC_ORCHESTRATION}}</div>
+                <div class="text-xs text-slate-700 mb-2">{{ORCHESTRATION_ANALYSIS}}</div>
+                <div class="verdict">{{MECHANISM_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§6</span> {{SEC_TRACEABILITY}}</summary>
+            <div class="section-body">
+                <table><thead><tr><th>{{TH_RULE}}</th><th>{{TH_DEFINED}}</th><th>{{TH_IMPLEMENTED}}</th><th>{{TH_TESTED}}</th><th>{{TH_GAP}}</th></tr></thead>
+                <tbody>{{TRACEABILITY_ROWS}}</tbody></table>
+                <div class="verdict">{{TRACEABILITY_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§7</span> Evaluation</summary>
+            <div class="section-body">
+                <table><thead><tr><th>{{TH_SCENARIO_CLASS}}</th><th>{{TH_EXISTS}}</th><th>{{TH_WHERE}}</th><th>{{TH_COMMENT}}</th></tr></thead>
+                <tbody>{{EVAL_ROWS}}</tbody></table>
+                <div class="verdict">{{EVAL_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§8</span> Operations</summary>
+            <div class="section-body">
+                <table><thead><tr><th>{{TH_SIGNAL}}</th><th>{{TH_EXISTS}}</th><th>{{TH_WHERE}}</th><th>{{TH_VALUE}}</th></tr></thead>
+                <tbody>{{OPS_ROWS}}</tbody></table>
+                <div class="verdict">{{OPS_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§9</span> {{SEC_CHANGE_MGMT}}</summary>
+            <div class="section-body">
+                <table><thead><tr><th>{{TH_ARTIFACT}}</th><th>{{TH_VERSIONED}}</th><th>{{TH_REQUIRES_REGRESSION}}</th><th>{{TH_ACTUALLY_TESTED}}</th><th>{{TH_RISK}}</th></tr></thead>
+                <tbody>{{CHANGE_ROWS}}</tbody></table>
+                <div class="verdict">{{CHANGE_VERDICT}}</div>
+            </div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§10</span> {{SEC_CONFLICTS}}</summary>
+            <div class="section-body">{{CONFLICTS_CONTENT}}</div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§13</span> {{SEC_ANTIPATTERNS}}</summary>
+            <div class="section-body">{{ANTIPATTERNS_CONTENT}}</div>
+        </details>
+
+        <details class="audit-section">
+            <summary><span class="text-slate-400 mono text-xs mr-1">§14</span> {{SEC_CONTEXT_BUDGET}}</summary>
+            <div class="section-body">{{CONTEXT_BUDGET_CONTENT}}</div>
+        </details>
+
+        <!-- Findings: good / needs work / critical -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 mt-5">
+            <div class="good border rounded-xl p-3"><p class="font-semibold text-sm mb-2">{{LBL_STRONG}}</p><ul class="text-xs space-y-1">{{GOOD_ITEMS}}</ul></div>
+            <div class="normal border rounded-xl p-3"><p class="font-semibold text-sm mb-2">{{LBL_IMPROVE}}</p><ul class="text-xs space-y-1">{{NEEDS_WORK_ITEMS}}</ul></div>
+            <div class="danger border rounded-xl p-3"><p class="font-semibold text-sm mb-2">{{LBL_CRITICAL}}</p><ul class="text-xs space-y-1">{{CRITICAL_ITEMS}}</ul></div>
+        </div>
+
+        <!-- Regression risk badges -->
+        <div class="flex flex-wrap gap-2 text-xs mb-4">
+            <span class="risk-safe px-2 py-0.5 rounded-full font-medium">{{N_SAFE}} Safe</span>
+            <span class="risk-breaking px-2 py-0.5 rounded-full font-medium">{{N_BREAKING}} Breaking</span>
+            <span class="risk-behavioural px-2 py-0.5 rounded-full font-medium">{{N_BEHAVIOURAL}} Behavioural</span>
+        </div>
+
+        <!-- §15 Backlog -->
+        <div class="mb-5">
+            <h3 class="font-semibold text-slate-900 text-sm mb-2">{{HEADING_BACKLOG}}</h3>
+            <table class="text-xs"><thead><tr><th>#</th><th>{{TH_ACTION}}</th><th>{{TH_LAYER}}</th><th>{{TH_FILE}}</th><th>{{TH_PRIORITY}}</th><th>{{TH_RISK}}</th></tr></thead>
+            <tbody>{{BACKLOG_ROWS}}</tbody></table>
+        </div>
+
+        <!-- §16 Patch plan -->
+        <div>
+            <h3 class="font-semibold text-slate-900 text-sm mb-2">{{HEADING_PATCH_PLAN}}</h3>
+            <div class="space-y-3">
+                <!-- 🔁 повтори для каждого из топ-3 дефицитов -->
+                <div class="rounded-xl border border-slate-200 p-3 text-xs">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{{DEFICIT_N}}</span>
+                        <span class="font-semibold text-slate-900">{{PATCH_TITLE}}</span>
+                        <span class="{{PATCH_RISK_CLASS}} mono px-1.5 py-0.5 rounded">{{PATCH_RISK}}</span>
+                    </div>
+                    <div class="text-slate-600 mb-1">{{PATCH_GOAL}}</div>
+                    <details class="mt-1">
+                        <summary class="text-xs text-indigo-600 cursor-pointer">{{LBL_SHOW_DRAFT}}</summary>
+                        <pre class="mt-1 bg-slate-800 text-slate-200 p-3 rounded-lg text-xs overflow-x-auto">{{PATCH_DRAFT}}</pre>
+                    </details>
+                    <div class="text-slate-500 mt-2">{{PATCH_VERIFY}}</div>
+                </div>
+                <!-- /🔁 -->
+            </div>
+        </div>
+
+    </div><!-- /agent-body -->
+</article>
+<!-- 🔁 END agent card -->
+
+</div>
+
+
+<!-- ======================= VIEW 4: ISSUES & ROADMAP ======================= -->
+<div id="view-issues" class="view max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+
+    <!-- Critical issues -->
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6 border-l-4 border-red-500">
+        <h2 class="text-base font-semibold text-red-900 mb-4">{{HEADING_CRITICAL_ISSUES}}</h2>
+        <div class="space-y-3">{{CRITICAL_ISSUES_BLOCKS}}</div>
+    </section>
+
+    <!-- Common patterns -->
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-4">{{HEADING_COMMON_PATTERNS}}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">{{COMMON_PATTERNS_BLOCKS}}</div>
+    </section>
+
+    <!-- Agent maturity heatmap -->
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-1">{{HEADING_MATURITY_MATRIX}}</h2>
+        <p class="text-xs text-slate-400 mb-4">{{MATURITY_MATRIX_DESC}}</p>
+        <div class="overflow-x-auto">
+            <table class="text-xs w-full">
+                <thead><tr class="border-b border-slate-200">
+                    <th class="text-left py-2 pr-4 font-semibold text-slate-600">{{TH_AGENT}}</th>
+                    {{MATURITY_HEADER_CELLS}}
+                </tr></thead>
+                <tbody>{{MATURITY_BODY_ROWS}}</tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Contract matrix -->
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-1">{{HEADING_CONTRACT_MATRIX}}</h2>
+        <p class="text-xs text-slate-400 mb-2">{{CONTRACT_MATRIX_DESC}}</p>
+        <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600 mb-4">{{CONTRACT_MATRIX_LEGEND}}</div>
+        <div class="overflow-x-auto">
+            <table class="text-xs w-full">
+                <thead><tr class="border-b border-slate-200">
+                    <th class="text-left py-2 pr-4 font-semibold text-slate-600">{{TH_FROM}}</th>
+                    {{CONTRACT_HEADER_CELLS}}
+                </tr></thead>
+                <tbody>{{CONTRACT_BODY_ROWS}}</tbody>
+            </table>
+        </div>
+        <div class="mt-3 flex gap-3 text-xs">
+            <span class="contract-typed px-2 py-0.5 rounded font-medium">Typed</span>
+            <span class="contract-implicit px-2 py-0.5 rounded font-medium">Implicit</span>
+            <span class="contract-absent px-2 py-0.5 rounded font-medium">Absent</span>
+            <span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-medium">N/A</span>
+        </div>
+    </section>
+
+    <!-- Top issues ranked -->
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-4">{{HEADING_TOP_ISSUES}}</h2>
+        <div class="space-y-3">{{TOP_ISSUES_BLOCKS}}</div>
+    </section>
+
+    <!-- Roadmap -->
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-2">{{HEADING_ROADMAP}}</h2>
+        <p class="text-xs text-slate-400 mb-5">{{ROADMAP_PRIORITY_NOTE}}</p>
+        <div class="space-y-5">{{ROADMAP_PHASES}}</div>
+    </section>
+
+    <!-- Checklist summary -->
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-base font-semibold text-slate-900 mb-4">{{HEADING_CHECKLIST_SUMMARY}}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead><tr class="border-b border-slate-200">
+                    <th class="text-left py-2 pr-4 font-semibold text-slate-600">{{TH_CHECK}}</th>
+                    {{CHECKLIST_HEADER_CELLS}}
+                </tr></thead>
+                <tbody>{{CHECKLIST_BODY_ROWS}}</tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, curve: 'basis' } });
+    function showView(name) {
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        document.getElementById('view-' + name).classList.remove('hidden');
+        document.querySelectorAll('[id^="btn-"]').forEach(b => { b.classList.remove('tab-active'); b.classList.add('tab-inactive'); });
+        var btn = document.getElementById('btn-' + name);
+        btn.classList.remove('tab-inactive');
+        btn.classList.add('tab-active');
+        if (name === 'overview') mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+    }
+</script>
+</body>
+</html>

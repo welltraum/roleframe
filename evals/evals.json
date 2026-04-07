@@ -1,0 +1,347 @@
+{
+  "skill_name": "roleframe",
+  "evals": [
+    {
+      "id": "trigger-01",
+      "prompt": "/roleframe design Agent for processing product return requests",
+      "expected_output": "The skill activates in design mode and starts clarifying the business function.",
+      "files": [],
+      "assertions": [
+        "The response recognizes design mode.",
+        "The response asks clarifying questions before proposing implementation details.",
+        "The response frames the task as a business function rather than a generic assistant."
+      ],
+      "tags": ["trigger", "positive", "design"]
+    },
+    {
+      "id": "trigger-02",
+      "prompt": "/roleframe review agents/1c",
+      "expected_output": "The skill activates in review mode and starts discovering agent artifacts from the provided path.",
+      "files": [],
+      "assertions": [
+        "The response recognizes review mode.",
+        "The response mentions reading agent files or artifacts from the supplied path.",
+        "The response uses an audit framing rather than an implementation framing."
+      ],
+      "tags": ["trigger", "positive", "review"]
+    },
+    {
+      "id": "trigger-03",
+      "prompt": "/roleframe dashboard",
+      "expected_output": "The skill activates in dashboard mode.",
+      "files": [],
+      "assertions": [
+        "The response recognizes dashboard mode.",
+        "The response mentions existing audit files as the data source.",
+        "The response does not treat the task as a generic analytics dashboard."
+      ],
+      "tags": ["trigger", "positive", "dashboard"]
+    },
+    {
+      "id": "trigger-04",
+      "prompt": "Спроектируй агента для обработки заявок",
+      "expected_output": "The skill auto-activates in design mode for the Russian request.",
+      "files": [],
+      "assertions": [
+        "The response is in Russian.",
+        "The response frames the request as agent design.",
+        "The response asks what business result the agent must return."
+      ],
+      "tags": ["trigger", "positive", "design", "ru"]
+    },
+    {
+      "id": "trigger-05",
+      "prompt": "Проведи аудит агентов",
+      "expected_output": "The skill auto-activates in review mode for the Russian request.",
+      "files": [],
+      "assertions": [
+        "The response is in Russian.",
+        "The response frames the task as an audit.",
+        "The response asks for or auto-discovers agent artifacts."
+      ],
+      "tags": ["trigger", "positive", "review", "ru"]
+    },
+    {
+      "id": "trigger-06",
+      "prompt": "Собери дашборд агентов",
+      "expected_output": "The skill auto-activates in dashboard mode for the Russian request.",
+      "files": [],
+      "assertions": [
+        "The response is in Russian.",
+        "The response refers to audit files as input data.",
+        "The response does not confuse the task with a sales or product dashboard."
+      ],
+      "tags": ["trigger", "positive", "dashboard", "ru"]
+    },
+    {
+      "id": "trigger-07",
+      "prompt": "/roleframe review",
+      "expected_output": "The skill activates in review mode and falls back to default agent discovery.",
+      "files": [],
+      "assertions": [
+        "The response recognizes review mode.",
+        "The response mentions default discovery from agents/.",
+        "The response does not stop on a missing explicit path."
+      ],
+      "tags": ["trigger", "positive", "review"]
+    },
+    {
+      "id": "trigger-08",
+      "prompt": "/roleframe",
+      "expected_output": "The skill shows a help message with available modes.",
+      "files": [],
+      "assertions": [
+        "The response lists design, review, and dashboard modes.",
+        "The response stays in the detected language.",
+        "The response does not guess a mode when no arguments are given."
+      ],
+      "tags": ["trigger", "positive", "help"]
+    },
+    {
+      "id": "trigger-09",
+      "prompt": "I need to design a multi-agent system for customer support",
+      "expected_output": "The skill auto-activates in design mode.",
+      "files": [],
+      "assertions": [
+        "The response frames the task as design.",
+        "The response checks whether the requested function needs decomposition.",
+        "The response asks about the consumer and output format."
+      ],
+      "tags": ["trigger", "positive", "design"]
+    },
+    {
+      "id": "trigger-10",
+      "prompt": "Audit the agent maturity",
+      "expected_output": "The skill auto-activates in review mode.",
+      "files": [],
+      "assertions": [
+        "The response frames the task as an audit.",
+        "The response refers to maturity criteria or evidence-based scoring.",
+        "The response asks for a path or starts discovery."
+      ],
+      "tags": ["trigger", "positive", "review"]
+    },
+    {
+      "id": "trigger-negative-01",
+      "prompt": "Write a Python script for data processing",
+      "expected_output": "The skill must not activate. The task should be handled as a normal coding request.",
+      "files": [],
+      "assertions": [
+        "The response does not force IDEF0 framing.",
+        "The response does not mention roleframe modes.",
+        "The response treats the request as a normal coding task."
+      ],
+      "tags": ["trigger", "negative"]
+    },
+    {
+      "id": "trigger-negative-02",
+      "prompt": "Fix the bug in supervisor.py",
+      "expected_output": "The skill must not activate.",
+      "files": [],
+      "assertions": [
+        "The response stays focused on bug fixing.",
+        "The response does not switch into audit mode.",
+        "The response does not ask business-function questions unrelated to the bug."
+      ],
+      "tags": ["trigger", "negative"]
+    },
+    {
+      "id": "trigger-negative-03",
+      "prompt": "Create a dashboard for sales metrics",
+      "expected_output": "The skill must not activate because the request is not about agent audits.",
+      "files": [],
+      "assertions": [
+        "The response treats the dashboard as a generic analytics task.",
+        "The response does not require audit markdown files.",
+        "The response does not mention agent maturity."
+      ],
+      "tags": ["trigger", "negative"]
+    },
+    {
+      "id": "trigger-negative-04",
+      "prompt": "What is IDEF0?",
+      "expected_output": "The skill must not auto-activate because this is an informational question.",
+      "files": [],
+      "assertions": [
+        "The response can explain IDEF0 directly.",
+        "The response does not switch into design or review workflow.",
+        "The response does not invent output artifacts."
+      ],
+      "tags": ["trigger", "negative"]
+    },
+    {
+      "id": "trigger-negative-05",
+      "prompt": "Help me with my 1C configuration",
+      "expected_output": "The skill must not activate because the request is domain support, not agent design.",
+      "files": [],
+      "assertions": [
+        "The response stays on the 1C task.",
+        "The response does not route to roleframe.",
+        "The response does not ask for agent paths or audit files."
+      ],
+      "tags": ["trigger", "negative"]
+    },
+    {
+      "id": "functional-design-d1",
+      "prompt": "/roleframe design Agent that converts a fuzzy user request into a structured query to a product catalog",
+      "expected_output": "A full single-agent design package with IDEF0 and explicit control/mechanism split.",
+      "files": [],
+      "assertions": [
+        "The response asks clarifying questions about business function, consumer, inputs, and output format.",
+        "The response contains an IDEF0 card with Input, Control, Mechanism, and Output.",
+        "The response labels what belongs to Control and what belongs to Mechanism.",
+        "The output contract covers happy path, business-empty, and tool failure.",
+        "The response uses the passport template concept."
+      ],
+      "tags": ["functional", "design"]
+    },
+    {
+      "id": "functional-design-d2",
+      "prompt": "/roleframe design System for end-to-end processing of tax authority requests: extract requirements, find documents, prepare response, archive",
+      "expected_output": "A decomposed multi-agent design with supervisor and routing contract.",
+      "files": [],
+      "assertions": [
+        "The response rejects a single-agent framing as too broad.",
+        "The response proposes 3 to 4 agents with rationale.",
+        "The response includes a supervisor or routing role.",
+        "The response defines a routing contract between agents.",
+        "The response includes a relationship diagram in Mermaid or equivalent structured form."
+      ],
+      "tags": ["functional", "design", "multi-agent"]
+    },
+    {
+      "id": "functional-design-d3",
+      "prompt": "/roleframe design Smart assistant for our company",
+      "expected_output": "The skill pushes back on the vague brief and asks for a concrete business result.",
+      "files": [],
+      "assertions": [
+        "The response does not accept the vague request as-is.",
+        "The response asks what specific business result the agent must return.",
+        "The response hints at decomposition if the user describes multiple functions."
+      ],
+      "tags": ["functional", "design", "edge-case"]
+    },
+    {
+      "id": "functional-review-r1",
+      "prompt": "/roleframe review evals/files/sample-agents/agents",
+      "expected_output": "A full review over the fixture agents with evidence-driven findings.",
+      "files": [
+        "evals/files/sample-agents/agents/supervisor.md",
+        "evals/files/sample-agents/agents/document-finder.md",
+        "evals/files/sample-agents/agents/response-drafter.md",
+        "evals/files/sample-agents/prompts/agents/supervisor.txt",
+        "evals/files/sample-agents/src/tools/factory.py"
+      ],
+      "assertions": [
+        "The response discovers all fixture agent files.",
+        "The response resolves the placeholder include used by the supervisor fixture.",
+        "The response cites concrete file paths or file:line evidence.",
+        "The response scores maturity criteria or uses an explicit audit rubric.",
+        "The response includes cross-agent analysis or overlap findings."
+      ],
+      "tags": ["functional", "review"]
+    },
+    {
+      "id": "functional-review-r2",
+      "prompt": "/roleframe review",
+      "expected_output": "The skill uses default discovery when no path argument is supplied.",
+      "files": [],
+      "assertions": [
+        "The response mentions default search under agents/.",
+        "The response stays in review mode.",
+        "The response does not require a path before it can explain the workflow."
+      ],
+      "tags": ["functional", "review"]
+    },
+    {
+      "id": "functional-review-r3",
+      "prompt": "/roleframe review evals/files/sample-agents/agents/supervisor.md",
+      "expected_output": "The skill reviews a single agent artifact deeply instead of scanning the full set.",
+      "files": [
+        "evals/files/sample-agents/agents/supervisor.md",
+        "evals/files/sample-agents/prompts/agents/supervisor.txt"
+      ],
+      "assertions": [
+        "The response scopes the review to the supplied file.",
+        "The response still applies the audit structure.",
+        "The response still includes evidence and checklist-style findings."
+      ],
+      "tags": ["functional", "review", "single-agent"]
+    },
+    {
+      "id": "functional-dashboard-b1",
+      "prompt": "/roleframe dashboard evals/files/sample-audits",
+      "expected_output": "A dashboard build using the fixture audits and the bundled HTML template.",
+      "files": [
+        "evals/files/sample-audits/01_supervisor.md",
+        "evals/files/sample-audits/02_document-finder.md",
+        "evals/files/sample-audits/03_response-drafter.md",
+        "assets/dashboard-template.html"
+      ],
+      "assertions": [
+        "The response reads audit markdown files as input.",
+        "The response references the bundled HTML template.",
+        "The output target is docs/agent_audit/infographic.html.",
+        "The response expects overview, methodology, agents, and issues views.",
+        "The response does not generate an unrelated dashboard structure."
+      ],
+      "tags": ["functional", "dashboard"]
+    },
+    {
+      "id": "functional-dashboard-b2",
+      "prompt": "/roleframe dashboard docs/empty_audits",
+      "expected_output": "The skill detects that no audit files exist and suggests review first.",
+      "files": [],
+      "assertions": [
+        "The response states that no audit files were found.",
+        "The response suggests running /roleframe review first.",
+        "The response does not claim success with an empty dashboard."
+      ],
+      "tags": ["functional", "dashboard", "edge-case"]
+    },
+    {
+      "id": "comparison-a",
+      "prompt": "Design an agent for processing product return requests",
+      "expected_output": "With the skill, the design should be more structured than the baseline and include IDEF0 plus explicit contracts.",
+      "files": [],
+      "assertions": [
+        "The with-skill output contains an IDEF0 structure.",
+        "The with-skill output contains a three-path output contract.",
+        "The with-skill output distinguishes Control from Mechanism."
+      ],
+      "tags": ["comparison", "baseline", "design"]
+    },
+    {
+      "id": "comparison-b",
+      "prompt": "Review the agent in evals/files/sample-agents/agents/supervisor.md",
+      "expected_output": "With the skill, the review should be more evidence-driven and structured than the baseline.",
+      "files": [
+        "evals/files/sample-agents/agents/supervisor.md",
+        "evals/files/sample-agents/prompts/agents/supervisor.txt"
+      ],
+      "assertions": [
+        "The with-skill output contains a stable audit structure.",
+        "The with-skill output cites file evidence.",
+        "The with-skill output includes actionable backlog items."
+      ],
+      "tags": ["comparison", "baseline", "review"]
+    },
+    {
+      "id": "comparison-c",
+      "prompt": "Create an HTML dashboard for the agent audit in evals/files/sample-audits/",
+      "expected_output": "With the skill, the dashboard should follow the bundled template and RoleFrame semantics better than baseline.",
+      "files": [
+        "evals/files/sample-audits/01_supervisor.md",
+        "evals/files/sample-audits/02_document-finder.md",
+        "evals/files/sample-audits/03_response-drafter.md",
+        "assets/dashboard-template.html"
+      ],
+      "assertions": [
+        "The with-skill output uses the bundled template path.",
+        "The with-skill output references the four-view structure.",
+        "The with-skill output treats the dashboard as an audit artifact, not a generic HTML page."
+      ],
+      "tags": ["comparison", "baseline", "dashboard"]
+    }
+  ]
+}
