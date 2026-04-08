@@ -18,17 +18,17 @@ WORKSPACE_ROOT = ROOT / "eval-workspace"
 
 FIRST_WAVE_IDS = {
     "functional-design-d1",
+    "functional-design-d2",
     "functional-design-d3",
     "functional-review-r1",
-    "functional-dashboard-b1",
-    "functional-dashboard-b2",
+    "comparison-a",
     "comparison-b",
 }
 
 BLOCKING_IDS = {
+    "functional-design-d1",
+    "functional-design-d2",
     "functional-review-r1",
-    "functional-dashboard-b1",
-    "functional-dashboard-b2",
 }
 
 
@@ -108,10 +108,8 @@ def artifact_expectations(eval_id: str, tags: list[str], config_name: str) -> di
 
     if "review" in tags:
         required_with_skill.extend(["audit_summary", "dashboard_html", "agent_audits", "structured_audits", "structured_summary"])
-    elif "dashboard" in tags and eval_id != "functional-dashboard-b2":
-        required_with_skill.append("dashboard_html")
-    elif eval_id == "functional-dashboard-b2":
-        forbidden_with_skill.append("dashboard_html")
+    elif "design" in tags:
+        required_with_skill.extend(["design_summary", "dashboard_html", "agent_designs", "structured_designs", "structured_design_summary"])
 
     return {
         "required": required_with_skill,

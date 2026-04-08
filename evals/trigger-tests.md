@@ -9,14 +9,12 @@ Verify that `/roleframe` activates on relevant queries and does NOT activate on 
 |---|---|---|
 | 1 | `/roleframe design Agent for processing product return requests` | design |
 | 2 | `/roleframe review agents/1c` | review |
-| 3 | `/roleframe dashboard` | dashboard |
-| 4 | `Спроектируй агента для обработки заявок` | design |
-| 5 | `Проведи аудит агентов` | review |
-| 6 | `Собери дашборд агентов` | dashboard |
-| 7 | `/roleframe review` | review |
-| 8 | `/roleframe` | help |
-| 9 | `I need to design a multi-agent system for customer support` | design |
-| 10 | `Audit the agent maturity` | review |
+| 3 | `Спроектируй агента для обработки заявок` | design |
+| 4 | `Проведи аудит агентов` | review |
+| 5 | `/roleframe review` | review |
+| 6 | `/roleframe` | help |
+| 7 | `I need to design a multi-agent system for customer support` | design |
+| 8 | `Audit the agent maturity` | review |
 
 ## Should NOT trigger
 
@@ -24,7 +22,7 @@ Verify that `/roleframe` activates on relevant queries and does NOT activate on 
 |---|---|---|
 | 1 | `Write a Python script for data processing` | The skill must not activate. The task should be handled as a normal coding request. |
 | 2 | `Fix the bug in supervisor.py` | The skill must not activate. |
-| 3 | `Create a dashboard for sales metrics` | The skill must not activate because the request is not about agent audits. |
+| 3 | `Create a dashboard for sales metrics` | The skill must not activate because the request is not about agent design or agent audits. |
 | 4 | `What is IDEF0?` | The skill must not auto-activate because this is an informational question. |
 | 5 | `Help me with my 1C configuration` | The skill must not activate because the request is domain support, not agent design. |
 

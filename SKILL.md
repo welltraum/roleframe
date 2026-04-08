@@ -1,13 +1,12 @@
 ---
 name: roleframe
 description: >
-  Design, audit, and analyze AI agent systems using IDEF0 functional methodology.
-  Use when user wants to: design a new agent or multi-agent system (design),
-  audit existing agents against 10 maturity criteria (review),
-  generate an HTML dashboard from audit artifacts (dashboard).
-  Triggers: "design agent", "audit agents", "agent dashboard", "roleframe",
-  "agent review", "agent dashboard html", "agent maturity",
-  "спроектируй агента", "аудит агентов", "дашборд агентов".
+  Design and review AI agent systems using IDEF0 functional methodology.
+  Use when user wants to: develop a new agent or multi-agent system as an engineering package (design),
+  audit existing project agents against 10 maturity criteria with discovery-first workflow (review).
+  Dashboard HTML is generated automatically as an artifact of design and review.
+  Triggers: "design agent", "audit agents", "roleframe", "agent review", "agent maturity",
+  "спроектируй агента", "аудит агентов", "разработай агента".
 license: Apache-2.0
 metadata:
   author: welltraum
@@ -45,9 +44,9 @@ An agent is a **designed software function** with explicit boundaries — not a 
 
 Load only what is needed for the current mode:
 
-- Design: [references/methodology.md](references/methodology.md), [references/checklist.md](references/checklist.md), [references/passport-template.md](references/passport-template.md)
+- Design: [references/methodology.md](references/methodology.md), [references/checklist.md](references/checklist.md), [references/passport-template.md](references/passport-template.md), [references/structured-design.md](references/structured-design.md)
 - Review: [references/prompt-archaeology.md](references/prompt-archaeology.md), [references/anti-patterns.md](references/anti-patterns.md), [references/structured-audit.md](references/structured-audit.md), [references/audit-template.md](references/audit-template.md)
-- Dashboard: [references/dashboard-playbook.md](references/dashboard-playbook.md), [assets/dashboard-template.html](assets/dashboard-template.html)
+- Renderer: [references/dashboard-playbook.md](references/dashboard-playbook.md), [assets/dashboard-template.html](assets/dashboard-template.html)
 
 ### IDEF0 model (always apply)
 
@@ -74,46 +73,72 @@ Parse the first word to select mode:
 
 | Mode | Purpose | Extra args |
 |---|---|---|
-| `design` | Design new agent(s) from scratch | Description of business task |
-| `review` | Audit existing agents against 10 maturity criteria | Path to agent files (default: `agents/`) |
-| `dashboard` | Generate HTML dashboard from audit results | Path to audits (default: `docs/agent_audit/`) |
+| `design` | Develop a new agent or multi-agent system as an implementation-ready package | Description of business task |
+| `review` | Discover project agent artifacts and audit them against 10 maturity criteria | Path to project subtree, agent file, or repository root |
 
-If arguments are empty or unrecognized, show help in the detected language with all three modes.
+If arguments are empty or unrecognized, show help in the detected language with these two modes only.
+
+If the first word is `dashboard`, treat it as a deprecated alias, do not advertise it as a normal mode, and explain:
+- dashboard is now generated automatically by `design` and `review`
+- if a structured package already exists, rebuild it with `uv run scripts/render_roleframe_package.py --kind review --input <path> --output <path>` or `--kind design`
 
 ---
 
 ## Mode: design
 
-Guide the user through designing an agent as a business function.
+Develop an implementation-ready agent package, not a generic brainstorm.
 
-### Step 1: Clarify the business function
-Ask:
-- What specific business result must the agent return? (Not "help with" — a concrete action.)
-- Who consumes the output? (human, another agent, API)
-- What are the inputs? (request, file, event)
-- What output format is expected?
-- Are there existing agents this must integrate with?
+### Step 1: Fix the business function
+Ask and lock:
+- What specific business result must the agent return?
+- Who consumes the output?
+- What are the success criteria?
+- What are the inputs and integration boundaries?
+- What is explicitly out of scope?
 
-### Step 2: Decomposition check
-If the function is too broad, propose splitting:
-- Each atomic business function = separate agent
-- If agents > 1, a supervisor with routing contract is needed
-- Show decomposition tree with rationale
+### Step 2: Define integration context
+- Existing systems, agents, APIs, or handoff points
+- Required contracts and critical dependencies
+- Safety, compliance, latency, or runtime constraints
 
-### Step 3: IDEF0 for each agent
-For each agent fill four quadrants. Consult [references/methodology.md](references/methodology.md).
+### Step 3: Decompose the solution
+If the brief is too broad:
+- Split it into atomic business functions
+- Add a supervisor only if routing is really needed
+- Show the decomposition tree and routing rationale
 
-Explicitly label each design element: **Control** (goes into prompt/skill) vs **Mechanism** (goes into code/tools).
+### Step 4: Design each agent through IDEF0
+For each agent fill the four quadrants from [references/methodology.md](references/methodology.md).
 
-### Step 4: Validate against checklist
-Load and run [references/checklist.md](references/checklist.md). Mark each item pass/fail.
+Explicitly separate:
+- **Control**: role, SOP, constraints, output contract
+- **Mechanism**: tools, memory, runtime, middleware
 
-### Step 5: Generate artifacts
-For each agent:
-1. Agent passport — use [references/passport-template.md](references/passport-template.md)
-2. Filled IDEF0 card
-3. Checklist with pass/fail
-4. If multiple agents — mermaid relationship diagram + routing contract
+### Step 5: Design the execution package
+For each agent specify:
+- typed input/output/failure contracts
+- runtime loop and error handling
+- tools and dependency model
+- evaluation plan
+- observability and change-management plan
+
+### Step 6: Validate against the checklist
+Load [references/checklist.md](references/checklist.md). Mark each item pass/fail before packaging.
+
+### Step 7: Generate artifacts and render them
+Write the structured design package:
+- `docs/agent_design/NN_name.design.json`
+- `docs/agent_design/summary.design.json`
+
+Then render the views:
+- `uv run scripts/render_roleframe_package.py --kind design --input docs/agent_design --output docs/agent_design`
+
+The renderer must generate:
+- `docs/agent_design/NN_name.md`
+- `docs/agent_design/README.md`
+- `docs/agent_design/dashboard.html`
+
+Before claiming success, verify that the JSON package, markdown views, and dashboard all exist.
 
 ---
 
@@ -121,11 +146,18 @@ For each agent:
 
 Audit existing agents against 10 maturity criteria (max 30 points).
 
-### Step 1: Discover agents
-- If path given — read agent files from there
-- If no path — search `agents/` recursively for `*.md` with YAML frontmatter
-- For each file: read frontmatter + prompt content
-- Resolve `{{placeholder}}` references to find included prompt files
+### Step 1: Discover agent artifacts in the project
+- If path given and it is a directory, start discovery from that subtree
+- If path given and it is a file, review that file deeply and also pull related prompt, include, tool, runtime, and sub-agent artifacts
+- If no path is given, start discovery from the project root
+- Search not only `agents/*.md`, but all likely agent signals:
+  - markdown or text prompts with YAML frontmatter
+  - `You are...` or role-defining prompts
+  - `sub_agents`
+  - toolkit/runtime configs
+  - tool factory or orchestration code
+  - prompt includes like `{{placeholder}}`
+- Build a short artifact inventory before scoring
 
 ### Step 2: Prompt archaeology (for agents without explicit structure)
 Before scoring, apply [references/prompt-archaeology.md](references/prompt-archaeology.md) to reconstruct the implicit IDEF0:
@@ -212,53 +244,12 @@ Example:
 - Write per-agent structured audits: `docs/agent_audit/NN_name.audit.json`
 - Write package summary: `docs/agent_audit/summary.audit.json`
 - Number files `01_`, `02_` by hierarchy, supervisor first
-- Run `uv run scripts/render_audit_package.py --input docs/agent_audit --output docs/agent_audit`
+- Run `uv run scripts/render_roleframe_package.py --kind review --input docs/agent_audit --output docs/agent_audit`
 - The renderer must generate:
   - `docs/agent_audit/NN_name.md`
   - `docs/agent_audit/README.md`
   - `docs/agent_audit/dashboard.html`
 - Before claiming success, verify that the JSON package, markdown views, and dashboard all exist
-
----
-
-## Mode: dashboard
-
-**This mode rebuilds the dashboard from an existing audit package.** Use it when review artifacts already exist and you want to regenerate or update the views only.
-
-If no audit files exist yet — say so and suggest running `/roleframe review` first.
-
-### Step 1: Read audit data
-- Read `docs/agent_audit/*.audit.json` and `docs/agent_audit/summary.audit.json` first
-- If structured JSON is absent, attempt a compatibility import from legacy `docs/agent_audit/*.md`
-- If legacy markdown lacks evidence / contracts / patch-plan sections needed for deterministic rendering, stop and tell the user to rerun `/roleframe review`
-- Additionally load the project methodology source for dashboard onboarding:
-  - If `docs/methodology.<lang>.md` exists, use it as the primary source for the Methodology view
-  - Otherwise use `docs/methodology.ru.md` and `docs/methodology.en.md` as bilingual reference sources
-  - If those files do not exist, fall back to [references/methodology.md](references/methodology.md) only
-- If no audits — suggest `/roleframe review` first
-
-### Step 2: Detect language and set it for the entire HTML
-The dashboard language = language of the request that triggered this skill. Set it once as a constant and apply everywhere: tab labels, section headers, criteria names, badge text, tooltips, backlog items, roadmap phases.
-
-### Step 3: Run the renderer
-
-**CRITICAL: You MUST use [assets/dashboard-template.html](assets/dashboard-template.html) and [references/dashboard-playbook.md](references/dashboard-playbook.md).**
-
-Do not hand-write HTML. Do not invent a parallel layout. Run:
-
-`uv run scripts/render_audit_package.py --input docs/agent_audit --output docs/agent_audit`
-
-The renderer is responsible for:
-- validating the structured audit package
-- rendering markdown views
-- filling the bundled HTML template
-- keeping the agents view dense without repeating long prose
-
-### Step 4: Verify the rendered package
-- `docs/agent_audit/dashboard.html` exists
-- the four views are non-empty
-- each agent card includes source links, verdict, IDEF0, evidence, 10 criteria, contracts, anti-patterns, backlog, and patch-plan summary
-- if compatibility import was attempted and failed, report that a fresh `/roleframe review` is required
 
 ---
 

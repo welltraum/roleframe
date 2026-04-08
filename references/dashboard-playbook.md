@@ -12,10 +12,12 @@
 
 ## Input contract
 
-The renderer reads:
+The renderer reads one of these structured packages:
 
 - `NN_name.audit.json`
 - `summary.audit.json`
+- `NN_name.design.json`
+- `summary.design.json`
 - `assets/dashboard-template.html`
 
 It writes:
@@ -28,8 +30,8 @@ The renderer is deterministic. The LLM does not compose HTML by hand.
 
 ## Renderer workflow
 
-1. Validate every `*.audit.json`
-2. Validate `summary.audit.json`
+1. Validate every structured package file for the selected kind
+2. Validate the matching summary file
 3. Render markdown views from JSON
 4. Fill `assets/dashboard-template.html`
 5. Verify that all four dashboard views are non-empty

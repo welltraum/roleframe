@@ -12,3 +12,5 @@ tmp/
 eval-workspace/*
 !eval-workspace/.gitkeep
 docs/agent_audit/*
+.agents/
+.claude/

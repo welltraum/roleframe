@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "name": "catalog-query-designer",
+    "language": "en",
+    "source_context": "Single-agent design brief for turning fuzzy user requests into structured catalog queries.",
+    "designed_at": "2026-04-08"
+  },
+  "summary": {
+    "readiness_score": 74,
+    "readiness_level": "Implementation-ready draft",
+    "verdict": "The design has a clear business boundary and typed contracts. The main remaining risk is incomplete instrumentation for retrieval quality and fallback quality.",
+    "primary_risk": "Observability and regression coverage are still thinner than the control and contract design."
+  },
+  "business_function": {
+    "goal": "Transform a fuzzy user request into a validated structured query for the product catalog API.",
+    "consumer": "Catalog backend and search UI.",
+    "success_criteria": [
+      "Returns a typed query object for supported intents.",
+      "Explains business-empty outcomes without inventing unavailable filters.",
+      "Produces a degraded contract when retrieval tools are unavailable."
+    ],
+    "in_scope": [
+      "Normalize user intent into catalog filters.",
+      "Validate supported filter combinations.",
+      "Return structured metadata for downstream search execution."
+    ],
+    "out_of_scope": [
+      "Executing checkout or order management flows.",
+      "Recommending products without catalog evidence.",
+      "Editing catalog data."
+    ]
+  },
+  "idef0": {
+    "input": "User request text, locale, and optional dialog context enter the function. Unsupported intents are rejected before query assembly.",
+    "control": "The prompt fixes the role, normalization SOP, unsupported-intent policy, and the output contract for success, empty, and degraded paths.",
+    "mechanism": "The agent uses a catalog schema reference, validation rules, and retrieval tools. Runtime limits bound the number of tool calls and retries.",
+    "output": "The function returns a typed structured query, a business-empty result, or a degraded response with retry guidance."
+  },
+  "control_spec": {
+    "role": "Catalog query planner for product search.",
+    "sop": [
+      "Classify the request into a supported catalog intent.",
+      "Extract candidate entities, filters, and ambiguities.",
+      "Validate the filter set against the catalog schema.",
+      "Return the strict output contract with confidence and rationale."
+    ],
+    "constraints": [
+      "Do not invent unsupported filters or product facts.",
+      "Do not return free-form prose as the primary payload.",
+      "If the schema or tools are unavailable, return the degraded contract."
+    ]
+  },
+  "mechanism_spec": {
+    "tools": [
+      {
+        "name": "catalog_schema_lookup",
+        "purpose": "Resolve supported filter names and allowed values.",
+        "failure_mode": "Return degraded output and request retry."
+      },
+      {
+        "name": "catalog_examples_store",
+        "purpose": "Ground normalization on known query examples.",
+        "failure_mode": "Continue without examples and lower confidence."
+      }
+    ],
+    "memory_strategy": "Keep only the current request, active ambiguity notes, and the latest validated schema slice.",
+    "runtime_loop": "At most two lookup steps before producing the final contract. No recursive delegation.",
+    "error_handling": "Timeouts convert to degraded output. Validation mismatches return business-empty with clarification suggestions."
+  },
+  "contracts": {
+    "consumer": "catalog-search-api",
+    "input_contract": "{ request_text: string, locale: string, session_filters?: object }",
+    "output_contract": "{ status: \"success\", query: object, confidence: number, reasoning: string[] } | { status: \"empty\", reason: string, suggestions: string[] }",
+    "failure_contract": "{ status: \"degraded\", reason: string, retryable: boolean, fallback_action: string }"
+  },
+  "dependencies": [
+    {
+      "name": "catalog schema service",
+      "type": "API",
+      "reason": "Supplies the allowed filter vocabulary.",
+      "risk": "Schema drift breaks generated queries."
+    },
+    {
+      "name": "search UI",
+      "type": "consumer",
+      "reason": "Consumes the typed payload and explanation metadata.",
+      "risk": "UI parser mismatch breaks the success path."
+    }
+  ],
+  "evaluation_plan": {
+    "scenarios": [
+      "Happy path for brand + category + price filter queries.",
+      "Unsupported intent that should be rejected cleanly.",
+      "Tool timeout that must produce degraded output."
+    ],
+    "metrics": [
+      "Structured query validity rate.",
+      "Unsupported-intent false positive rate.",
+      "Degraded response honesty rate."
+    ],
+    "regression": [
+      "Run a fixed scenario pack on every prompt or schema change.",
+      "Replay timeout and empty-result mocks before release."
+    ]
+  },
+  "delivery_plan": {
+    "phases": [
+      {
+        "title": "Phase 1. Contracts",
+        "description": "Freeze input/output/failure contracts with the UI and API consumers."
+      },
+      {
+        "title": "Phase 2. Runtime",
+        "description": "Implement schema lookup, validation, and bounded retry logic."
+      },
+      {
+        "title": "Phase 3. Eval and ops",
+        "description": "Add scenario regression, tracing, and degraded-path dashboards."
+      }
+    ],
+    "observability": [
+      "Log request class, selected filters, and contract path.",
+      "Track schema lookup latency and timeout rate."
+    ],
+    "change_management": [
+      "Version prompt and contract changes together.",
+      "Require regression rerun before deployment."
+    ]
+  }
+}

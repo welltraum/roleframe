@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fixture Agent Audit Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --panel: rgba(255,252,247,.94);
+      --line: #e8ddcf;
+      --ink: #1f2937;
+      --muted: #667085;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --warn: #b54708;
+      --good: #027a48;
+    }
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: radial-gradient(circle at top right, #efe7d8 0%, #f7f4ee 38%, #f3efe6 100%);
+      color: var(--ink);
+    }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(77, 57, 34, 0.06);
+    }
+    .tab-active { background: #0f766e; color: #fff; }
+    .tab-inactive { background: #ece4d8; color: #475467; }
+    .tab-inactive:hover { background: #e2d7c8; }
+    .badge-danger { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+    .badge-warn { background: #fffaeb; color: var(--warn); border: 1px solid #fedf89; }
+    .badge-good { background: #ecfdf3; color: var(--good); border: 1px solid #abefc6; }
+    .chip { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+    .chip-danger { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+    .chip-warn { background: #fffaeb; color: var(--warn); border: 1px solid #fedf89; }
+    .chip-good { background: #ecfdf3; color: var(--good); border: 1px solid #abefc6; }
+    .chip-neutral { background: #f2f4f7; color: #475467; border: 1px solid #d0d5dd; }
+    .score-bar { transition: width .45s ease; }
+    .mermaid { background: transparent !important; }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    .data-table td, .data-table th {
+      padding: 8px 10px;
+      border-bottom: 1px solid #ebe3d7;
+      vertical-align: top;
+    }
+    .data-table th {
+      color: #475467;
+      font-size: 12px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .data-table td {
+      font-size: 13px;
+    }
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef7f6;
+      color: #115e59;
+      border: 1px solid #cfe9e6;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .section-lead {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 74ch;
+    }
+    .subpanel {
+      border: 1px solid #ebe3d7;
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .code-frame {
+      border-radius: 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    [data-agent-card] {
+      scroll-margin-top: 96px;
+    }
+    [data-block="criteria"] th,
+    [data-block="backlog"] th {
+      white-space: nowrap;
+    }
+    [data-block="patch-plan-item"] pre {
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-50 border-b border-[var(--line)] backdrop-blur bg-[rgba(247,244,238,0.9)]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Fixture Agent Audit Dashboard</h1>
+        <p class="text-sm text-slate-500">Structured audit package for evals/files/sample-audits</p>
+      </div>
+      <nav class="flex gap-2 flex-wrap">
+        <button id="btn-overview" onclick="showView('overview')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-active">Overview</button>
+        <button id="btn-methodology" onclick="showView('methodology')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Methodology</button>
+        <button id="btn-agents" onclick="showView('agents')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Agents</button>
+        <button id="btn-issues" onclick="showView('issues')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Issues and Plan</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section id="view-overview" class="view space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Overall verdict</div><div class="text-3xl font-extrabold">Prototype</div><div class="text-sm text-slate-500 mt-2">The audit is now assembled from a structured source of truth rather than two independent prose artifacts.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Average score</div><div class="text-3xl font-extrabold">15.3/30</div><div class="text-sm text-slate-500 mt-2">The weakest areas are contracts, safety, and runtime policies.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Canonical findings</div><div class="text-3xl font-extrabold">8 of 8</div><div class="text-sm text-slate-500 mt-2">The fixture covers all key baseline categories for review.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Main systemic risk</div><div class="text-3xl font-extrabold">Text-based orchestration</div><div class="text-sm text-slate-500 mt-2">Almost all cross-agent links remain implicit until the contracts are typed.</div></div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-2">Architecture Diagram</h2>
+        <p class="text-sm text-slate-500 mb-4">The supervisor manages two sub-agents, but almost all connections are described in text instead of a typed payload. That is why contracts and safety dominate over tool-level concerns.</p>
+        <div class="mermaid">flowchart LR
+    U["User request"] --> S["Supervisor"]
+    S -->|"implicit handoff"| D["Document-finder"]
+    S -->|"implicit handoff"| R["Response-drafter"]
+    D -->|"prose documents"| S
+    R -->|"free-form draft"| S
+    S -->|"free text"| U</div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-5">Maturity Scores</h2>
+        <div class="space-y-5">
+          <div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">supervisor</span><span>12/30, Working prototype</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-rose-500 score-bar" style="width:40%"></div></div><div class="text-xs text-slate-500 mt-1">Mixes routing and final answer without typed contracts.</div></div>
+<div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">document-finder</span><span>18/30, Working prototype</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-amber-500 score-bar" style="width:60%"></div></div><div class="text-xs text-slate-500 mt-1">No typed handoff and no formal failure policy.</div></div>
+<div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">response-drafter</span><span>16/30, Working prototype</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-amber-500 score-bar" style="width:53%"></div></div><div class="text-xs text-slate-500 mt-1">The prompt encourages guesswork and does not provide an honest partial path.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-methodology" class="view hidden space-y-6">
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-2">Methodology</h2>
+        <p class="text-sm text-slate-500 mb-5">The detailed methodology lives in separate documents, while the dashboard keeps only a compact reading map. This reduces token usage and avoids forcing the model to restate the same material for every agent.</p>
+        <div class="flex flex-wrap gap-3 mb-5">
+          <a class="link-pill" href="../../../docs/methodology.ru.md">Open methodology, RU</a>
+<a class="link-pill" href="../../../docs/methodology.en.md">Open methodology, EN</a>
+<a class="link-pill" href="README.md">Open audit summary</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><div class="font-semibold mb-2">What the methodology covers</div><ul class="list-disc pl-5 space-y-1"><li>why an agent is not just an LLM</li><li>how Control and Mechanism are separated</li><li>why an agent should be designed as a single business function</li><li>why typed contracts matter more than polished prose</li></ul></div>
+<div class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><div class="font-semibold mb-2">How to read this package</div><ul class="list-disc pl-5 space-y-1"><li>start with the overview for the pattern-level picture</li><li>then read the agent cards for a dense slice of each agent</li><li>then open the markdown audit if you need the detailed patch plan</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-agents" class="view hidden space-y-5">
+      <div class="panel rounded-3xl p-5" data-block="agents-lead"><p class="text-sm text-slate-600">The cards below are intended to be self-contained: they already include the verdict, IDEF0, evidence, 10 criteria, contracts, backlog, and top-3 patch plan, without needing to open the markdown.</p></div>
+<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="supervisor"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">supervisor</h2><p class="text-sm text-slate-500">Mixes routing and final answer without typed contracts.</p></div><div class="flex items-center gap-2"><span class="badge-danger rounded-full px-3 py-1 text-sm font-bold">12/30</span><span class="chip chip-danger">Working prototype</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="01_supervisor.md">Full audit</a><a class="link-pill" href="../sample-agents/agents/supervisor.md">supervisor.md</a><a class="link-pill" href="../sample-agents/prompts/agents/supervisor.txt">supervisor.txt</a><a class="link-pill" href="../sample-agents/src/tools/factory.py">factory.py</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Short verdict</div><p class="text-sm">The supervisor carries both routing and final response assembly. That blurs the function boundary, and the contracts do not read like an engineering interface. The main risk comes from the combination of free-form output, hidden dependency, and implicit handoff.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> The agent accepts a user request in the tax domain and distinguishes cases with documents from those without them. The input type is not described as a schema.</div><div><strong>Control:</strong> The prompt defines a sequence of classification, delegation, and final answer assembly. Constraints for honest degradation and output formatting are not formalized.</div><div><strong>Mechanism:</strong> The frontmatter declares the `docs-search` toolkit, two sub-agents, and retry middleware. The real toolset comes from the factory and does not match the prompt text.</div><div><strong>Output:</strong> The output is described as useful free text. There is no machine-readable contract for success, empty, error, or delegation.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evidence"><div class="font-semibold mb-3">Key evidence points</div><ul class="list-disc pl-5 space-y-2 text-sm"><li><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L5</span>, The routing contract exists only as a prose rule without a typed payload.</li>
+<li><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L6</span>, The prompt allows `archive_search`, which is missing from the declared toolkit.</li>
+<li><span class="mono">evals/files/sample-agents/src/tools/factory.py#L1-L4</span>, The factory confirms that `docs-search` contains only `search_documents` and `fetch_document`.</li>
+<li><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</span>, The final answer is allowed in free text and may fill in gaps.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="criteria"><div class="font-semibold mb-3">Maturity criteria</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Criterion</th><th>Score</th><th>Why</th><th>Evidence</th></tr></thead><tbody><tr><td>Function boundary</td><td>1</td><td>The boundary is too wide and merges orchestration with the final answer.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L9</td></tr>
+<tr><td>Input</td><td>1</td><td>The input classes can be inferred from the text, but they are not described as a contract.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L3-L5</td></tr>
+<tr><td>Control</td><td>1</td><td>There is a role and a fragment of an SOP, but the output contract is missing.</td><td>evals/files/sample-agents/agents/supervisor.md#L14-L16, evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</td></tr>
+<tr><td>Mechanism</td><td>1</td><td>The prompt refers to a tool that does not exist in the declared toolkit.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L6, evals/files/sample-agents/src/tools/factory.py#L1-L4</td></tr>
+<tr><td>Context engineering</td><td>1</td><td>The prompt does not pin down rules for loading and compressing context.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L1-L9</td></tr>
+<tr><td>Runtime loop</td><td>1</td><td>Retry is listed in metadata, but step limits and stop conditions are not described.</td><td>evals/files/sample-agents/agents/supervisor.md#L11-L13</td></tr>
+<tr><td>Evaluation</td><td>2</td><td>A review fixture exists, but agent-level scenarios remain partial.</td><td>evals/evals.json#L225-L239, evals/expected-findings.md#L7-L18</td></tr>
+<tr><td>Observability</td><td>1</td><td>The fixture has no separate artifacts for routing traces or failures.</td><td>evals/files/sample-agents/agents/supervisor.md#L1-L16</td></tr>
+<tr><td>Safety</td><td>1</td><td>The prompt encourages smoothing over gaps instead of taking an honest partial path.</td><td>evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</td></tr>
+<tr><td>Change management</td><td>2</td><td>The artifacts exist in git, but the regression loop for the prompt and routing is not described.</td><td>evals/review-dashboard-runbook.md#L112-L119</td></tr></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Current contract</div><div class="text-xs text-slate-500 mb-2">Consumer: <span class="mono">user + downstream review/dashboard tooling</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Return a useful answer in free text.</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Target contract</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error | delegation&quot;,
+  &quot;selected_agent&quot;: &quot;document-finder | response-drafter | null&quot;,
+  &quot;payload&quot;: {},
+  &quot;reason&quot;: &quot;string&quot;
+}</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="anti-patterns"><div class="font-semibold mb-2">Anti-patterns and systemic risks</div><div class="flex flex-wrap gap-2"><span class="chip chip-neutral" title="The prompt requires a capability outside the declared toolkit.">AP-14 Hidden dependency</span>
+<span class="chip chip-neutral" title="The handoff between agents is not described in a machine-readable way.">Implicit routing contract</span>
+<span class="chip chip-neutral" title="The final answer has no strict schema.">Free-form output</span>
+<span class="chip chip-neutral" title="The prompt allows smoothing over missing data.">Safety risk</span></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="backlog"><div class="font-semibold mb-3">Backlog</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Action</th><th>Layer</th><th>Risk</th><th>Location</th></tr></thead><tbody><tr><td>Introduce a typed output contract for success / empty / error / delegation.</td><td>Control</td><td><span class="chip chip-danger">Breaking</span></td><td><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</span></td></tr>
+<tr><td>Remove `archive_search` from the prompt or declare the capability in the toolkit and factory.</td><td>Mechanism</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L6</span></td></tr>
+<tr><td>Split routing and final response into separate functions, or strictly type the handoff.</td><td>Architecture</td><td><span class="chip chip-danger">Breaking</span></td><td><span class="mono">evals/files/sample-agents/agents/supervisor.md#L2-L16</span></td></tr>
+<tr><td>Add a step limit, honest stop policy, and telemetry for the selected route.</td><td>Runtime</td><td><span class="chip chip-good">Safe</span></td><td><span class="mono">evals/files/sample-agents/agents/supervisor.md#L11-L13</span></td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan"><div class="font-semibold mb-3">Patch plan, top 3</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Introduce a strict output contract</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L8-L9</span> · schema · Breaking</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error | delegation&quot;,
+  &quot;selected_agent&quot;: &quot;document-finder | response-drafter | null&quot;,
+  &quot;payload&quot;: {},
+  &quot;reason&quot;: &quot;string&quot;
+}</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Model the happy path with each sub-agent.</li><li>Check the empty and tool-error paths.</li><li>Make sure the output can be parsed without heuristics.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Remove the hidden dependency</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/prompts/agents/supervisor.txt#L6</span> · prompt · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Use only the tools declared in the assigned toolkit. If a required capability is missing, return status=&quot;error&quot; with the missing capability name.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check that the prompt no longer mentions `archive_search`.</li><li>Compare the prompt with `src/tools/factory.py`.</li><li>Make sure the review no longer catches a hidden dependency.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Narrow the supervisor's function boundary</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/supervisor.md#L2-L16</span> · prompt · Breaking</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Your only job is to classify the request and delegate it with a typed payload. Do not compose the final answer yourself.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check that the final answer remains only with response-drafter.</li><li>Check that the supervisor returns a route decision rather than a prose response.</li><li>Update the contract matrix and negative eval cases.</li></ul></div></div></div></article>
+<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="document-finder"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">document-finder</h2><p class="text-sm text-slate-500">No typed handoff and no formal failure policy.</p></div><div class="flex items-center gap-2"><span class="badge-warn rounded-full px-3 py-1 text-sm font-bold">18/30</span><span class="chip chip-danger">Working prototype</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="02_document-finder.md">Full audit</a><a class="link-pill" href="../sample-agents/agents/document-finder.md">document-finder.md</a><a class="link-pill" href="../sample-agents/src/tools/factory.py">factory.py</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Short verdict</div><p class="text-sm">Document-finder is already close to an atomic business function. The main gaps are not in the agent's purpose, but in the handoff and failure policy. For now the result is good enough for a prototype, but not for a reliable multi-agent contract.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> The agent receives a document search request from the supervisor. The input format is expected in text rather than a schema.</div><div><strong>Control:</strong> The prompt requires finding relevant documents and reporting an empty result. Retry and handoff rules are described heuristically.</div><div><strong>Mechanism:</strong> The `docs-search` toolkit provides search and fetch capabilities. The runtime policy for timeout, retry count, and budget is not fixed.</div><div><strong>Output:</strong> The agent returns the best documents or a message that nothing was found. There is no machine-readable payload with status and a bounded result set.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evidence"><div class="font-semibold mb-3">Key evidence points</div><ul class="list-disc pl-5 space-y-2 text-sm"><li><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span>, The happy path is described, but the handoff is explicitly allowed without a fixed schema.</li>
+<li><span class="mono">evals/files/sample-agents/agents/document-finder.md#L12</span>, Retry is defined as “if it feels worth it” rather than as a verifiable policy.</li>
+<li><span class="mono">evals/files/sample-agents/src/tools/factory.py#L1-L4</span>, The toolkit confirms that the agent has enough tools for the search function.</li>
+<li><span class="mono">evals/files/sample-agents/agents/document-finder.md#L13-L14</span>, The empty-result and success paths exist only as a prose response back to the supervisor.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="criteria"><div class="font-semibold mb-3">Maturity criteria</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Criterion</th><th>Score</th><th>Why</th><th>Evidence</th></tr></thead><tbody><tr><td>Function boundary</td><td>3</td><td>The document search function is separated and reads unambiguously.</td><td>evals/files/sample-agents/agents/document-finder.md#L9-L11</td></tr>
+<tr><td>Input</td><td>2</td><td>The input is understandable from the agent's role, but not formalized as a typed schema.</td><td>evals/files/sample-agents/agents/document-finder.md#L9-L11</td></tr>
+<tr><td>Control</td><td>2</td><td>The happy path is clear, but the contract for failure and handoff remains incomplete.</td><td>evals/files/sample-agents/agents/document-finder.md#L11-L14</td></tr>
+<tr><td>Mechanism</td><td>2</td><td>The toolkit matches the purpose, but the execution policy is not elevated to a runtime contract.</td><td>evals/files/sample-agents/agents/document-finder.md#L5-L7, evals/files/sample-agents/src/tools/factory.py#L1-L4</td></tr>
+<tr><td>Context engineering</td><td>1</td><td>Rules for truncating results and the payload budget are not specified.</td><td>evals/files/sample-agents/agents/document-finder.md#L11-L14</td></tr>
+<tr><td>Runtime loop</td><td>1</td><td>Retry is described as a heuristic and does not include a timeout or give-up policy.</td><td>evals/files/sample-agents/agents/document-finder.md#L12</td></tr>
+<tr><td>Evaluation</td><td>2</td><td>A fixture review exists, but separate negative scenarios for the agent are not singled out.</td><td>evals/evals.json#L225-L239, evals/expected-findings.md#L10-L14</td></tr>
+<tr><td>Observability</td><td>1</td><td>Signals for empty result and retry count are not formalized as operations artifacts.</td><td>evals/files/sample-agents/agents/document-finder.md#L1-L14</td></tr>
+<tr><td>Safety</td><td>2</td><td>The agent does not overpromise, but the tool-failure path is still weak.</td><td>evals/files/sample-agents/agents/document-finder.md#L12-L14</td></tr>
+<tr><td>Change management</td><td>2</td><td>Versioning exists, but the change cycle is not closed with negative regression checks.</td><td>evals/review-dashboard-runbook.md#L112-L119</td></tr></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Current contract</div><div class="text-xs text-slate-500 mb-2">Consumer: <span class="mono">supervisor</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Return the best documents in free text. If nothing is found, tell the supervisor that nothing is available.</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Target contract</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error&quot;,
+  &quot;documents&quot;: [{&quot;id&quot;: &quot;string&quot;, &quot;title&quot;: &quot;string&quot;, &quot;relevance&quot;: 0.0}],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="anti-patterns"><div class="font-semibold mb-2">Anti-patterns and systemic risks</div><div class="flex flex-wrap gap-2"><span class="chip chip-neutral" title="The supervisor does not receive a machine-readable payload.">Untyped handoff</span>
+<span class="chip chip-neutral" title="Timeout, retry count, and give-up rules are missing.">Weak failure policy</span>
+<span class="chip chip-neutral" title="The size of the returned document set is not bounded.">Budget risk</span></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="backlog"><div class="font-semibold mb-3">Backlog</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Action</th><th>Layer</th><th>Risk</th><th>Location</th></tr></thead><tbody><tr><td>Introduce a typed handoff payload with status, documents, and reason.</td><td>Control</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span></td></tr>
+<tr><td>Formalize retry, timeout, and give-up policy.</td><td>Runtime</td><td><span class="chip chip-good">Safe</span></td><td><span class="mono">evals/files/sample-agents/agents/document-finder.md#L12</span></td></tr>
+<tr><td>Limit payload size and the number of returned documents.</td><td>Context</td><td><span class="chip chip-good">Safe</span></td><td><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span></td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan"><div class="font-semibold mb-3">Patch plan, top 3</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Typed handoff for found documents</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span> · schema · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | empty | error&quot;,
+  &quot;documents&quot;: [{&quot;id&quot;: &quot;string&quot;, &quot;title&quot;: &quot;string&quot;, &quot;relevance&quot;: 0.0}],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check the happy path with 1-3 documents.</li><li>Check the empty path with no documents found.</li><li>Check that the supervisor can parse the payload without heuristics.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Failure policy instead of heuristic retry</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/document-finder.md#L12</span> · runtime · Safe</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">If the tool fails, retry once. If the second attempt fails or times out, return status=&quot;error&quot; and include the failure reason.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Simulate a timeout and confirm that the agent returns status=error.</li><li>Check that the retry count does not exceed one.</li><li>Check that the prompt text no longer uses the feel-worth-it heuristic.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Budget rule for search results</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/document-finder.md#L11-L14</span> · prompt · Safe</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Return at most 3 documents. Pass ids, titles, and short evidence snippets instead of full document bodies.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check that the handoff does not blow up when there are many matches.</li><li>Check that relevance and ids are preserved.</li><li>Check that response-drafter receives enough data without context stuffing.</li></ul></div></div></div></article>
+<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="response-drafter"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">response-drafter</h2><p class="text-sm text-slate-500">The prompt encourages guesswork and does not provide an honest partial path.</p></div><div class="flex items-center gap-2"><span class="badge-warn rounded-full px-3 py-1 text-sm font-bold">16/30</span><span class="chip chip-danger">Working prototype</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="03_response-drafter.md">Full audit</a><a class="link-pill" href="../sample-agents/agents/response-drafter.md">response-drafter.md</a><a class="link-pill" href="../sample-agents/src/tools/factory.py">factory.py</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Short verdict</div><p class="text-sm">Response-drafter is isolated as a separate function and is not mixed with document search. The main problem is concentrated in Control: the prompt pushes the model to produce a complete answer even on incomplete data. In a tax scenario, that makes the agent unsafe by design.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> The agent accepts documents and confirmed facts from other agents. The input format is implied, but not described as a schema.</div><div><strong>Control:</strong> The prompt requires a full answer and allows filling gaps from context. Limits on sources of truth and an honest refusal path are missing.</div><div><strong>Mechanism:</strong> The `drafting` toolkit is minimal and matches the response-formatting task. The risk comes not from the tools, but from the prompt policy.</div><div><strong>Output:</strong> The output is flexible natural language without a strict schema. There is no defined status for partial, empty, or error paths.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evidence"><div class="font-semibold mb-3">Key evidence points</div><ul class="list-disc pl-5 space-y-2 text-sm"><li><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11</span>, The prompt allows filling gaps from context rather than only from confirmed facts.</li>
+<li><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L12</span>, A strict result schema is not required, which makes downstream parsing fragile.</li>
+<li><span class="mono">evals/files/sample-agents/src/tools/factory.py#L3</span>, The toolkit itself does not create the risk, so the problem is localized in Control.</li>
+<li><span class="mono">evals/expected-findings.md#L13-L18</span>, The baseline review explicitly expects a finding about unsafe completion behavior.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="criteria"><div class="font-semibold mb-3">Maturity criteria</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Criterion</th><th>Score</th><th>Why</th><th>Evidence</th></tr></thead><tbody><tr><td>Function boundary</td><td>2</td><td>The final response assembly function is separated from search and routing.</td><td>evals/files/sample-agents/agents/response-drafter.md#L9-L10</td></tr>
+<tr><td>Input</td><td>2</td><td>The input from other agents is understandable from the role, but not fixed as a structured handoff.</td><td>evals/files/sample-agents/agents/response-drafter.md#L9-L12</td></tr>
+<tr><td>Control</td><td>1</td><td>The prompt describes the goal, but does not place guardrails against inventing facts.</td><td>evals/files/sample-agents/agents/response-drafter.md#L11-L12</td></tr>
+<tr><td>Mechanism</td><td>2</td><td>The toolkit is minimal and appropriate for the final response assembly task.</td><td>evals/files/sample-agents/agents/response-drafter.md#L5-L7, evals/files/sample-agents/src/tools/factory.py#L1-L4</td></tr>
+<tr><td>Context engineering</td><td>1</td><td>The source of truth is not separated from supporting context, which leaves room for hallucination.</td><td>evals/files/sample-agents/agents/response-drafter.md#L11-L12</td></tr>
+<tr><td>Runtime loop</td><td>1</td><td>Stop conditions and post-validation of the result are not described as a runtime policy.</td><td>evals/files/sample-agents/agents/response-drafter.md#L9-L12</td></tr>
+<tr><td>Evaluation</td><td>2</td><td>A fixture review exists, but negative scenarios for incomplete input are not isolated.</td><td>evals/evals.json#L225-L239, evals/expected-findings.md#L13-L18</td></tr>
+<tr><td>Observability</td><td>1</td><td>There are no artifact-level signals for refusal, partial output, or hallucination detection.</td><td>evals/files/sample-agents/agents/response-drafter.md#L1-L12</td></tr>
+<tr><td>Safety</td><td>1</td><td>The prompt allows reconstructing missing data from context.</td><td>evals/files/sample-agents/agents/response-drafter.md#L11</td></tr>
+<tr><td>Change management</td><td>3</td><td>The artifacts are versioned, and the prompt risk is well localized to a single file.</td><td>evals/files/sample-agents/agents/response-drafter.md#L1-L12, evals/review-dashboard-runbook.md#L112-L119</td></tr></tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Current contract</div><div class="text-xs text-slate-500 mb-2">Consumer: <span class="mono">user + supervisor</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Write a complete response. Keep the output flexible and natural, there is no need for a strict response schema.</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Target contract</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | partial | error&quot;,
+  &quot;draft&quot;: &quot;string&quot;,
+  &quot;missing_inputs&quot;: [&quot;string&quot;],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="anti-patterns"><div class="font-semibold mb-2">Anti-patterns and systemic risks</div><div class="flex flex-wrap gap-2"><span class="chip chip-neutral" title="The prompt nudges the model to reconstruct facts instead of degrading honestly.">Unsafe completion</span>
+<span class="chip chip-neutral" title="The result cannot be validated programmatically with confidence.">Free-form output</span>
+<span class="chip chip-neutral" title="The supervisor is not required to pass a fixed set of confirmed facts.">Implicit input contract</span></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="backlog"><div class="font-semibold mb-3">Backlog</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Action</th><th>Layer</th><th>Risk</th><th>Location</th></tr></thead><tbody><tr><td>Forbid filling gaps with guesses and introduce an honest partial path.</td><td>Control</td><td><span class="chip chip-danger">Breaking</span></td><td><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11-L12</span></td></tr>
+<tr><td>Introduce a strict response schema with status, draft, and missing_inputs.</td><td>Output</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11-L12</span></td></tr>
+<tr><td>Formalize the handoff from the supervisor as a list of confirmed facts and documents.</td><td>Input</td><td><span class="chip chip-warn">Behavioural</span></td><td><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L9-L12</span></td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan"><div class="font-semibold mb-3">Patch plan, top 3</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Forbid guesswork</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11</span> · prompt · Breaking</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">If required facts are missing, do not fill gaps from context. Return status=&quot;partial&quot; and list the missing inputs explicitly.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check the incomplete-input scenario and expect status=partial.</li><li>Make sure the draft contains no unconfirmed facts.</li><li>Check that the refusal/partial path is stable across repeated runs.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Introduce a strict output contract</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L11-L12</span> · schema · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{
+  &quot;status&quot;: &quot;success | partial | error&quot;,
+  &quot;draft&quot;: &quot;string&quot;,
+  &quot;missing_inputs&quot;: [&quot;string&quot;],
+  &quot;reason&quot;: &quot;string&quot;
+}</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check result parsing without regex heuristics.</li><li>Check the success and partial paths.</li><li>Check that the downstream consumer can validate the schema.</li></ul></div>
+<div class="rounded-2xl border border-stone-200 p-4" data-block="patch-plan-item"><div class="font-semibold mb-1">Formalize input from the supervisor</div><div class="text-xs text-slate-500 mb-2"><span class="mono">evals/files/sample-agents/agents/response-drafter.md#L9-L12</span> · schema · Behavioural</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">Expected input: { &quot;facts&quot;: [...], &quot;documents&quot;: [...], &quot;confidence&quot;: &quot;string&quot; }. Ignore any data outside this payload.</pre><ul class="list-disc pl-5 mt-3 space-y-1 text-xs"><li>Check that the agent uses only the passed fields.</li><li>Check that missing facts lead to a partial path.</li><li>Check the cross-agent contract matrix after the change.</li></ul></div></div></div></article>
+    </section>
+
+    <section id="view-issues" class="view hidden space-y-6">
+      <div class="panel rounded-3xl p-6 border-l-4 border-rose-500">
+        <h2 class="text-lg font-bold text-rose-900 mb-4">Critical Issues</h2>
+        <div class="space-y-3 text-sm">
+          <p><strong>1.</strong> The supervisor mixes routing and final answer assembly, so its function boundary breaks first.</p>
+<p><strong>2.</strong> Document-finder has no typed handoff and no deterministic failure policy.</p>
+<p><strong>3.</strong> Response-drafter is unsafe by design because the prompt allows it to reconstruct facts.</p>
+<p><strong>4.</strong> Evaluation and observability exist only at the fixture-review level, not as per-agent contracts.</p>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-4">Maturity Matrix</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm data-table">
+            <thead>
+              <tr class="border-b border-stone-200 text-left">
+                <th>Agent</th><th>Boundary</th><th>Control</th><th>Mechanism</th><th>Eval</th><th>Safety</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono">supervisor</span></td><td>1</td><td>1</td><td>1</td><td>2</td><td>1</td><td>12</td></tr>
+<tr><td><span class="mono">document-finder</span></td><td>3</td><td>2</td><td>2</td><td>2</td><td>2</td><td>18</td></tr>
+<tr><td><span class="mono">response-drafter</span></td><td>2</td><td>1</td><td>2</td><td>2</td><td>1</td><td>16</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-4">Contract Matrix</h2>
+        <p class="text-sm text-slate-500 mb-4">Rows show the handoff source, columns show the consumer. Each cell stores the status and engineering risk.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm data-table">
+            <thead>
+              <tr class="border-b border-stone-200 text-left">
+                <th>Source</th><th>supervisor</th><th>document-finder</th><th>response-drafter</th><th>user</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono">supervisor</span></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">self</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">handoff exists, but the payload is not typed</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">the route decision is described in prose</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">the answer goes out as free text</div></td></tr>
+<tr><td><span class="mono">document-finder</span></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">document return goes back to the supervisor as a prose response</div></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">self</div></td><td><span class="chip chip-neutral">absent</span><div class="text-xs text-slate-500 mt-1">there is no direct contract for response-drafter</div></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">it does not answer the user directly</div></td></tr>
+<tr><td><span class="mono">response-drafter</span></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">the input format from the supervisor is not described as a schema</div></td><td><span class="chip chip-neutral">absent</span><div class="text-xs text-slate-500 mt-1">there is no direct handoff from document-finder</div></td><td><span class="chip chip-neutral">n/a</span><div class="text-xs text-slate-500 mt-1">self</div></td><td><span class="chip chip-neutral">implicit</span><div class="text-xs text-slate-500 mt-1">the final result is free-form and not validatable</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-3">Roadmap</h2>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Phase 1. Function + contract</div><p class="text-slate-600 mt-1">Split routing and final assembly, then introduce typed contracts at every cross-agent boundary.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Phase 2. Runtime + safety</div><p class="text-slate-600 mt-1">Add bounded retry, timeout, refusal, and partial paths where only prose heuristics exist today.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Phase 3. Eval + observability</div><p class="text-slate-600 mt-1">Close agent-level regressions, route telemetry, and signals for unsafe completion.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, curve: 'basis' } });
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+      document.getElementById('view-' + name).classList.remove('hidden');
+      document.querySelectorAll('[id^="btn-"]').forEach(b => {
+        b.classList.remove('tab-active');
+        b.classList.add('tab-inactive');
+      });
+      const btn = document.getElementById('btn-' + name);
+      btn.classList.remove('tab-inactive');
+      btn.classList.add('tab-active');
+      if (name === 'overview') {
+        mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+      }
+    }
+  </script>
+</body>
+</html>

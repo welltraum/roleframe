@@ -1,10 +1,10 @@
 # Agent development methodology
 
-This document is derived from `Инженерия агентов 2026`, mainly the sections about instructions, agent requirements, and IDEF0. Its purpose is to provide a compact but engineering-grade reference for reading the dashboard and the audit package.
+This document is based on `Инженерия агентов 2026`, mainly the sections on instructions, agent requirements, and IDEF0. It is meant to be a short, engineering-oriented reference for reading the dashboard and the audit package.
 
 ## 1. An agent is not an LLM
 
-An LLM alone is not an agent. It is a stochastic inference engine that interprets text and predicts tokens. An agent starts where an execution environment appears around the model:
+By itself, an LLM is not an agent. It is a stochastic inference engine that interprets text and predicts tokens. An agent starts where an execution environment appears around the model:
 
 - memory;
 - tools;
@@ -13,15 +13,15 @@ An LLM alone is not an agent. It is a stochastic inference engine that interpret
 - output contract;
 - eval and observability.
 
-Without those layers, you have a request-response interface to a model, not an agent system.
+Without those layers, you just have a request-response interface to a model, not an agent system.
 
 ## 2. Two development loops
 
-Agent development naturally splits into two coupled loops.
+In practice, agent development has two loops that need to stay connected.
 
 ### Engineering loop
 
-This loop owns:
+This loop covers:
 
 - architecture and component boundaries;
 - tool and API integrations;
@@ -30,11 +30,11 @@ This loop owns:
 - observability;
 - reproducibility and operations.
 
-Without it, even a strong prototype remains “magic” that cannot be operated safely.
+Without it, even a strong prototype remains "magic" that cannot be operated safely in production.
 
 ### Research loop
 
-This loop owns:
+This loop covers:
 
 - role design;
 - reasoning style;
@@ -43,9 +43,9 @@ This loop owns:
 - input/output formats;
 - eval datasets and error analysis.
 
-Without it, the system may be formally correct but behaviorally useless.
+Without it, the system may be formally correct but still useless in practice.
 
-Good agent work keeps both loops alive. Engineering without research produces empty automation. Research without engineering produces a fragile prompt prototype.
+Good agent work keeps both loops in play. Engineering without research produces empty automation. Research without engineering produces a fragile prompt prototype.
 
 ## 3. The minimum unit of design
 
@@ -53,19 +53,19 @@ Practical rule:
 
 > Agent = one business function.
 
-Not “a smart assistant”, not “an agent that does everything”, but one function with a clear trigger, clear constraints, and a defined product.
+Not "a smart assistant" or "an agent that does everything", but one function with a clear trigger, clear constraints, and a defined product.
 
-This matters because:
+This matters for three simple reasons:
 
 1. One function can be tested.
 2. One function can have a stable output contract.
 3. One function can have a clear responsibility boundary.
 
-If a request cannot be expressed as a single atomic function, the correct response is decomposition into multiple agents or a supervisor plus sub-agents.
+If a request cannot be expressed as a single atomic function, it should be decomposed into multiple agents or a supervisor plus sub-agents.
 
 ## 4. IDEF0 as the requirement frame
 
-Agent requirements are easier to reason about through IDEF0.
+IDEF0 is a practical way to structure agent requirements.
 
 ### Input
 
@@ -76,7 +76,7 @@ What starts the function:
 - a file;
 - a handoff from another agent.
 
-Input design is not just a list. It must cover request classes, edge cases, and invalid states.
+Input design is not just a list. It should cover request classes, edge cases, and invalid states.
 
 ### Control
 
@@ -88,7 +88,7 @@ What governs the behavior:
 - output contract;
 - decision rules.
 
-This is the primary control layer. It turns stochastic model behavior into a narrow corridor of allowed actions.
+This is the main control layer. It turns stochastic model behavior into a narrow set of allowed actions.
 
 ### Mechanism
 
@@ -113,7 +113,7 @@ What counts as completion:
 - partial / refusal;
 - delegation.
 
-The output must be treated as an interface, not as “some useful text”.
+The output must be treated as an interface, not as "some useful text".
 
 ## 5. What must exist in the control layer
 
@@ -129,7 +129,7 @@ Single Responsibility Principle matters here. Broad roles almost always create b
 
 ### SOP
 
-The SOP is the procedural core:
+The SOP is the procedural core of the agent:
 
 - entry conditions;
 - ordered steps;
@@ -137,7 +137,7 @@ The SOP is the procedural core:
 - stop conditions;
 - tool-use rules.
 
-A good SOP makes the agent behave like natural-language pseudocode. A weak SOP leaves too much room for improvisation.
+A good SOP makes the agent behave like natural-language pseudocode. A weak SOP leaves too much room for improvisation where precision is required.
 
 ### Constraints
 
@@ -159,11 +159,11 @@ An agent is a function, so its output should behave like an API contract:
 - stable across runs;
 - not limited to the happy path.
 
-If the output is not typed, the agent integrates poorly and becomes hard to test.
+If the output is not typed, the agent integrates poorly and becomes harder to test.
 
 ## 6. Context is an engineering problem
 
-Context engineering exists to avoid stuffing everything into one prompt.
+Context engineering is mostly about resisting the urge to stuff everything into one prompt.
 
 ### Static context
 
@@ -208,7 +208,7 @@ Changing one line in a prompt can alter the system as much as changing one line 
 
 ## 8. What eval must cover
 
-An agent cannot be trusted on a couple of happy-path examples.
+A couple of happy-path examples are not enough.
 
 Eval must cover:
 
@@ -220,7 +220,7 @@ Eval must cover:
 - incorrect routing;
 - constraint violations.
 
-The dataset should contain not only “nice” examples but also the cases most likely to break the logic.
+The dataset should contain not only "nice" examples but also the cases most likely to break the logic.
 
 ## 9. Practical minimum requirement set
 
@@ -235,4 +235,4 @@ Before implementation, an agent should have at least:
 7. Eval scenarios.
 8. Basic operational signals.
 
-Without these artifacts, teams usually fall back to prompt tuning by intuition.
+Without these artifacts, teams usually fall back to tuning prompts by intuition.

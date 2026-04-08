@@ -1,6 +1,6 @@
-# Review and dashboard eval runbook
+# Review and package eval runbook
 
-This runbook defines the canonical manual-first loop for the RoleFrame review testbed.
+This runbook defines the canonical manual-first loop for the RoleFrame review testbed and the structured package renderers.
 
 All `uv` commands in this repository should use workspace-local caches:
 
@@ -33,7 +33,8 @@ The purpose is simple: catch Skills that are too underspecified for smaller mode
 ## Canonical fixtures
 
 - Review testbed: [`evals/files/sample-agents`](./files/sample-agents)
-- Dashboard smoke fixture: [`evals/files/sample-audits`](./files/sample-audits)
+- Review dashboard smoke fixture: [`evals/files/sample-audits`](./files/sample-audits)
+- Design package smoke fixture: [`evals/files/sample-design-package`](./files/sample-design-package)
 - Expected findings baseline: [`evals/expected-findings.md`](./expected-findings.md)
 
 ## Output convention
@@ -86,9 +87,9 @@ If the client exports a raw response with a different extension, normalize it to
 
    - review outputs must include structured audit JSON plus rendered markdown views
    - review outputs must include evidence references in the audit package
-   - dashboard HTML must contain dense agent blocks for evidence, criteria, contracts, backlog, and patch plan
+   - review dashboard HTML must contain dense agent blocks for evidence, criteria, contracts, backlog, and patch plan
+   - design dashboard HTML must contain dense agent blocks for business function, control, mechanism, contracts, evaluation, and delivery
    - `functional-review-r1` is checked against the expected findings baseline heuristically
-   - `functional-dashboard-b2` must not create `dashboard.html`
 
 6. Fill `grading.json` and `timing.json` for each completed run.
 
@@ -113,7 +114,7 @@ If the client exports a raw response with a different extension, normalize it to
 
 ## Feedback loop
 
-Use the same fix loop for `review` and `dashboard`:
+Use the same fix loop for `review` and `design`:
 
 1. Run the prompt.
 2. Check that the required artifacts exist.

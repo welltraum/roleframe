@@ -108,6 +108,32 @@ STRUCTURED_SUMMARY_REQUIRED = {
     "agents_lead",
 }
 
+STRUCTURED_DESIGN_REQUIRED = {
+    "metadata",
+    "summary",
+    "business_function",
+    "idef0",
+    "control_spec",
+    "mechanism_spec",
+    "contracts",
+    "dependencies",
+    "evaluation_plan",
+    "delivery_plan",
+}
+
+STRUCTURED_DESIGN_SUMMARY_REQUIRED = {
+    "language",
+    "title",
+    "subtitle",
+    "overall_verdict",
+    "overview_cards",
+    "architecture",
+    "critical_risks",
+    "contract_matrix",
+    "implementation_phases",
+    "agents_lead",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate expected eval artifacts for one iteration.")
@@ -128,9 +154,16 @@ def candidate_paths(artifact_id: str, output_dir: Path) -> list[Path]:
         ],
         "audit_summary": [output_dir / "docs" / "agent_audit" / "README.md"],
         "structured_summary": [output_dir / "docs" / "agent_audit" / "summary.audit.json"],
-        "dashboard_html": [output_dir / "docs" / "agent_audit" / "dashboard.html"],
+        "dashboard_html": [
+            output_dir / "docs" / "agent_audit" / "dashboard.html",
+            output_dir / "docs" / "agent_design" / "dashboard.html",
+        ],
         "agent_audits": list((output_dir / "docs" / "agent_audit").glob("[0-9][0-9]_*.md")),
         "structured_audits": list((output_dir / "docs" / "agent_audit").glob("[0-9][0-9]_*.audit.json")),
+        "design_summary": [output_dir / "docs" / "agent_design" / "README.md"],
+        "structured_design_summary": [output_dir / "docs" / "agent_design" / "summary.design.json"],
+        "agent_designs": list((output_dir / "docs" / "agent_design").glob("[0-9][0-9]_*.md")),
+        "structured_designs": list((output_dir / "docs" / "agent_design").glob("[0-9][0-9]_*.design.json")),
     }
     return mapping.get(artifact_id, [])
 
@@ -172,7 +205,7 @@ def check_dashboard_html(path: Path) -> tuple[bool, str]:
         "дорож",
     ]
     marker_hits = sum(1 for marker in markers if marker in text.lower())
-    dense_markers = [
+    review_dense_markers = [
         'data-agent-card="',
         'data-block="evidence"',
         'data-block="criteria"',
@@ -180,9 +213,19 @@ def check_dashboard_html(path: Path) -> tuple[bool, str]:
         'data-block="backlog"',
         'data-block="patch-plan"',
     ]
-    dense_hits = sum(1 for marker in dense_markers if marker in text)
-    ok = ("<html" in text.lower() or "<!doctype html" in text.lower()) and len(text) >= 500 and marker_hits >= 2 and dense_hits >= 5
-    details = f"len={len(text)}, semantic_markers={marker_hits}, dense_markers={dense_hits}"
+    design_dense_markers = [
+        'data-agent-card="',
+        'data-block="business-function"',
+        'data-block="control"',
+        'data-block="mechanism"',
+        'data-block="contracts"',
+        'data-block="evaluation"',
+        'data-block="delivery"',
+    ]
+    review_hits = sum(1 for marker in review_dense_markers if marker in text)
+    design_hits = sum(1 for marker in design_dense_markers if marker in text)
+    ok = ("<html" in text.lower() or "<!doctype html" in text.lower()) and len(text) >= 500 and marker_hits >= 2 and max(review_hits, design_hits) >= 5
+    details = f"len={len(text)}, semantic_markers={marker_hits}, review_dense={review_hits}, design_dense={design_hits}"
     return ok, details
 
 
@@ -225,6 +268,41 @@ def validate_structured_summary(path: Path, expected_agents: int) -> tuple[bool,
         return False, f"{path.name}: maturity_rows={len(maturity_rows)} expected={expected_agents}"
     if not contract_rows:
         return False, f"{path.name}: contract_rows=0"
+    return True, path.name
+
+
+def validate_structured_design(path: Path) -> tuple[bool, str]:
+    payload = read_json(path)
+    missing = STRUCTURED_DESIGN_REQUIRED - set(payload)
+    if missing:
+        return False, f"{path.name}: missing_keys={sorted(missing)}"
+
+    summary = payload.get("summary", {})
+    if not isinstance(summary.get("readiness_score"), int):
+        return False, f"{path.name}: readiness_score_missing"
+    if not payload.get("control_spec", {}).get("sop"):
+        return False, f"{path.name}: missing_control_sop"
+    if not payload.get("mechanism_spec", {}).get("tools"):
+        return False, f"{path.name}: missing_tools"
+    if not payload.get("delivery_plan", {}).get("phases"):
+        return False, f"{path.name}: missing_delivery_phases"
+    if not payload.get("evaluation_plan", {}).get("scenarios"):
+        return False, f"{path.name}: missing_eval_scenarios"
+    return True, path.name
+
+
+def validate_structured_design_summary(path: Path, expected_agents: int) -> tuple[bool, str]:
+    payload = read_json(path)
+    missing = STRUCTURED_DESIGN_SUMMARY_REQUIRED - set(payload)
+    if missing:
+        return False, f"{path.name}: missing_keys={sorted(missing)}"
+
+    contract_rows = payload.get("contract_matrix", {}).get("rows", [])
+    phases = payload.get("implementation_phases", [])
+    if len(contract_rows) != expected_agents:
+        return False, f"{path.name}: contract_rows={len(contract_rows)} expected={expected_agents}"
+    if not phases:
+        return False, f"{path.name}: implementation_phases=0"
     return True, path.name
 
 
@@ -276,6 +354,35 @@ def check_review_content(manifest: dict, artifacts: dict[str, list[Path]]) -> li
     return checks
 
 
+def check_design_content(artifacts: dict[str, list[Path]]) -> list[dict]:
+    checks: list[dict] = []
+    design_paths = artifacts.get("agent_designs", [])
+    combined = read_many(design_paths)
+
+    required_sections = ["idef0", "contracts", "evaluation plan", "delivery plan", "control", "mechanism"]
+    section_hits = sum(1 for section in required_sections if section in combined.lower())
+    add_check(checks, "design_markdown_sections", section_hits >= 4, f"section_hits={section_hits}")
+
+    summary_paths = artifacts.get("design_summary", [])
+    if summary_paths:
+        summary_len = len(summary_paths[0].read_text(encoding="utf-8", errors="ignore").strip())
+        add_check(checks, "design_summary_nonempty", summary_len > 20, f"chars={summary_len}")
+
+    structured_paths = artifacts.get("structured_designs", [])
+    structured_results = [validate_structured_design(path) for path in structured_paths]
+    if structured_results:
+        ok = all(result[0] for result in structured_results)
+        details = "; ".join(result[1] for result in structured_results)
+        add_check(checks, "structured_design_schema", ok, details)
+
+    structured_summary_paths = artifacts.get("structured_design_summary", [])
+    if structured_summary_paths:
+        ok, details = validate_structured_design_summary(structured_summary_paths[0], len(structured_paths))
+        add_check(checks, "structured_design_summary_schema", ok, details)
+
+    return checks
+
+
 def check_content(manifest: dict, artifacts: dict[str, list[Path]]) -> list[dict]:
     checks: list[dict] = []
     raw_paths = artifacts.get("raw_response", [])
@@ -293,6 +400,8 @@ def check_content(manifest: dict, artifacts: dict[str, list[Path]]) -> list[dict
 
     if "review" in set(manifest.get("tags", [])) and artifacts.get("agent_audits"):
         checks.extend(check_review_content(manifest, artifacts))
+    if "design" in set(manifest.get("tags", [])) and artifacts.get("agent_designs"):
+        checks.extend(check_design_content(artifacts))
 
     return checks
 

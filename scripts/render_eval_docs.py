@@ -42,7 +42,7 @@ def render_trigger_tests(evals: list[dict]) -> str:
         "|---|---|---|",
     ]
     for index, item in enumerate(positive, start=1):
-        mode = next((tag for tag in item["tags"] if tag in {"design", "review", "dashboard", "help"}), "n/a")
+        mode = next((tag for tag in item["tags"] if tag in {"design", "review", "help"}), "n/a")
         lines.append(f"| {index} | `{item['prompt']}` | {mode} |")
 
     lines.extend(
@@ -79,7 +79,7 @@ def render_trigger_tests(evals: list[dict]) -> str:
 
 
 def render_functional_tests(evals: list[dict]) -> str:
-    grouped: dict[str, list[dict]] = {"design": [], "review": [], "dashboard": []}
+    grouped: dict[str, list[dict]] = {"design": [], "review": []}
     for item in evals:
         if "functional" not in item["tags"]:
             continue
@@ -91,7 +91,6 @@ def render_functional_tests(evals: list[dict]) -> str:
     mode_titles = {
         "design": "Mode: design",
         "review": "Mode: review",
-        "dashboard": "Mode: dashboard",
     }
 
     lines = [
@@ -100,11 +99,11 @@ def render_functional_tests(evals: list[dict]) -> str:
         "",
         "Verify that each mode produces correct, complete output.",
         "",
-        "Review outputs must follow the canonical audit package defined in `references/audit-template.md`,",
-        "including evidence-based scoring, backlog actions, and generated dashboard artifacts when applicable.",
+        "Design outputs must follow the structured design package and generate markdown plus dashboard artifacts.",
+        "Review outputs must follow the canonical audit package defined in `references/audit-template.md`.",
         "",
     ]
-    for mode in ["design", "review", "dashboard"]:
+    for mode in ["design", "review"]:
         lines.extend([f"## {mode_titles[mode]}", ""])
         for item in grouped[mode]:
             label = item["id"].split("-")[-1].upper()
@@ -125,8 +124,8 @@ def render_functional_tests(evals: list[dict]) -> str:
         [
             "## Eval workflow checks",
             "",
+            "- Before grading `design`, verify the raw response, design markdown files, summary, and `dashboard.html`.",
             "- Before grading `review`, verify the raw response, audit markdown files, summary, and `dashboard.html`.",
-            "- Before grading `dashboard`, verify the raw response and any expected dashboard artifact rules from `evals/evals.json`.",
             "- Run the first wave before the second wave in the risk-based cycle.",
             "",
         ]
