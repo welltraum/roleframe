@@ -1,122 +1,77 @@
 # Dashboard playbook
 
-## Quick map
-
-- Input contract
-- Renderer workflow
-- Template mapping
-- Agent card order
-- Ranking rules
-- Truncation rules
-- Fallback policy
-
 ## Input contract
 
-The renderer reads one of these structured packages:
+The renderer reads structured packages:
 
 - `NN_name.audit.json`
 - `summary.audit.json`
 - `NN_name.design.json`
 - `summary.design.json`
-- `assets/dashboard-template.html`
 
-It writes:
+Canonical location for new outputs:
+
+- `docs/roleframe/review/*`
+- `docs/roleframe/design/*`
+
+It writes derived views only:
 
 - `NN_name.md`
 - `README.md`
 - `dashboard.html`
 
-The renderer is deterministic. The LLM does not compose HTML by hand.
-
 ## Renderer workflow
 
-1. Validate every structured package file for the selected kind
-2. Validate the matching summary file
-3. Render markdown views from JSON
-4. Fill `assets/dashboard-template.html`
-5. Verify that all four dashboard views are non-empty
+1. Validate every structured file.
+2. Validate the matching summary.
+3. Render markdown views from JSON.
+4. Fill `assets/dashboard-template.html`.
+5. Fail if a required block is missing.
 
-## Template mapping
+## Mapping rules
 
-Use the template placeholders only as view slots. Do not encode semantics into ad-hoc HTML.
-
-| Placeholder group | Source |
+| Dashboard area | Source |
 |---|---|
-| Header and tabs | `summary.audit.json` |
-| Overview cards | `summary.overview_cards` |
-| Architecture text + Mermaid | `summary.architecture` |
-| Methodology lead and summary blocks | `summary.methodology` or renderer defaults |
-| Agent cards | per-agent `*.audit.json` |
-| Critical issues | `summary.critical_issues` |
-| Maturity matrix | `summary.maturity_matrix` |
-| Contract matrix | `summary.contract_matrix` |
-| Roadmap | `summary.roadmap` |
+| Overview | summary JSON |
+| Methodology | summary JSON or renderer defaults |
+| Unit cards | per-unit JSON |
+| Critical issues | summary JSON |
+| Matrices | summary JSON |
+| Roadmap | summary JSON |
 
-## Agent card order
+## Unit card order
 
-Every agent card must keep this order:
+Review card order:
 
-1. Source links
-2. Short verdict
-3. IDEF0
-4. Key evidence
-5. 10-criteria table
-6. Current vs target contract
-7. Anti-patterns / systemic risks
-8. Backlog
-9. Patch plan summary
+1. source links
+2. verdict
+3. artifact inventory
+4. IDEF0
+5. governance
+6. evidence
+7. criteria
+8. contracts
+9. anti-patterns
+10. backlog
+11. patch plan
 
-If one of these blocks is missing in JSON, the renderer must fail. Silent omission makes the dashboard shallow again.
+Design card order:
 
-## Ranking critical issues
+1. source links
+2. verdict
+3. boundary
+4. IDEF0
+5. control
+6. mechanism
+7. governance
+8. contracts
+9. dependencies
+10. evaluation
+11. delivery
 
-Critical issues should be chosen in this order:
+## Non-negotiable rules
 
-1. system-level contract failures
-2. hidden dependencies or unsafe tool behavior
-3. safety failures
-4. missing eval or observability that block safe rollout
-
-Do not waste the section on local cosmetic issues.
-
-## Contract matrix rules
-
-Rows = source agents.  
-Columns = consumer agents.
-
-Cell statuses:
-
-- `typed`
-- `implicit`
-- `absent`
-- `n/a`
-
-Each cell must carry a short note with the main engineering risk.
-
-## What to truncate and what to keep
-
-Safe to compress:
-
-- long verdict prose
-- repetitive explanations already visible in criteria or evidence
-- large patch drafts inside overview-level sections
-
-Never drop:
-
-- `file:line` evidence references
-- current vs target contract
-- backlog rows
-- top-3 patch plan
-- selected maturity scores
-
-## Fallback policy
-
-If structured JSON exists, use it.
-
-If JSON is absent:
-
-1. try to import legacy markdown
-2. if the markdown lacks required sections for evidence, contracts, or patch plan, stop
-3. tell the user to rerun `/roleframe review` to regenerate the package in structured form
-
-Compatibility import is transitional, not the main path.
+- dashboard HTML is derived
+- `file:line` evidence must never be dropped
+- governance blocks must never be omitted
+- if JSON is missing required fields, the renderer must fail instead of guessing

@@ -1,0 +1,14 @@
+{
+  "name": "mixed-pack",
+  "profile": "pack",
+  "invocation": "explicit-only",
+  "owned_surfaces": [
+    "routes/donor.route.json"
+  ],
+  "surface_modes": ["hidden"],
+  "visibility": {
+    "deployed": true,
+    "visible": true,
+    "owned_by": "external-runtime"
+  }
+}

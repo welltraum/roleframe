@@ -84,7 +84,9 @@ FINDING_PATTERNS = {
 STRUCTURED_AGENT_REQUIRED = {
     "metadata",
     "summary",
+    "artifact_inventory",
     "idef0",
+    "governance",
     "criteria",
     "evidence_points",
     "contracts",
@@ -115,6 +117,7 @@ STRUCTURED_DESIGN_REQUIRED = {
     "idef0",
     "control_spec",
     "mechanism_spec",
+    "governance",
     "contracts",
     "dependencies",
     "evaluation_plan",
@@ -145,25 +148,53 @@ def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def package_roots(output_dir: Path, kind: str) -> list[Path]:
+    roots = []
+    if kind == "review":
+        roots.extend(
+            [
+                output_dir / "docs" / "roleframe" / "review",
+                output_dir / "docs" / "agent_audit",
+            ]
+        )
+    else:
+        roots.extend(
+            [
+                output_dir / "docs" / "roleframe" / "design",
+                output_dir / "docs" / "agent_design",
+            ]
+        )
+    return roots
+
+
 def candidate_paths(artifact_id: str, output_dir: Path) -> list[Path]:
+    review_roots = package_roots(output_dir, "review")
+    design_roots = package_roots(output_dir, "design")
+
+    def first_paths(roots: list[Path], name: str) -> list[Path]:
+        return [root / name for root in roots]
+
+    def glob_paths(roots: list[Path], pattern: str) -> list[Path]:
+        paths: list[Path] = []
+        for root in roots:
+            paths.extend(sorted(root.glob(pattern)))
+        return paths
+
     mapping = {
         "raw_response": [
             output_dir / "response.md",
             output_dir / "response.txt",
             output_dir / "response.json",
         ],
-        "audit_summary": [output_dir / "docs" / "agent_audit" / "README.md"],
-        "structured_summary": [output_dir / "docs" / "agent_audit" / "summary.audit.json"],
-        "dashboard_html": [
-            output_dir / "docs" / "agent_audit" / "dashboard.html",
-            output_dir / "docs" / "agent_design" / "dashboard.html",
-        ],
-        "agent_audits": list((output_dir / "docs" / "agent_audit").glob("[0-9][0-9]_*.md")),
-        "structured_audits": list((output_dir / "docs" / "agent_audit").glob("[0-9][0-9]_*.audit.json")),
-        "design_summary": [output_dir / "docs" / "agent_design" / "README.md"],
-        "structured_design_summary": [output_dir / "docs" / "agent_design" / "summary.design.json"],
-        "agent_designs": list((output_dir / "docs" / "agent_design").glob("[0-9][0-9]_*.md")),
-        "structured_designs": list((output_dir / "docs" / "agent_design").glob("[0-9][0-9]_*.design.json")),
+        "audit_summary": first_paths(review_roots, "README.md"),
+        "structured_summary": first_paths(review_roots, "summary.audit.json"),
+        "dashboard_html": first_paths(review_roots, "dashboard.html") + first_paths(design_roots, "dashboard.html"),
+        "agent_audits": glob_paths(review_roots, "[0-9][0-9]_*.md"),
+        "structured_audits": glob_paths(review_roots, "[0-9][0-9]_*.audit.json"),
+        "design_summary": first_paths(design_roots, "README.md"),
+        "structured_design_summary": first_paths(design_roots, "summary.design.json"),
+        "agent_designs": glob_paths(design_roots, "[0-9][0-9]_*.md"),
+        "structured_designs": glob_paths(design_roots, "[0-9][0-9]_*.design.json"),
     }
     return mapping.get(artifact_id, [])
 
@@ -206,7 +237,9 @@ def check_dashboard_html(path: Path) -> tuple[bool, str]:
     ]
     marker_hits = sum(1 for marker in markers if marker in text.lower())
     review_dense_markers = [
-        'data-agent-card="',
+        'data-unit-card="',
+        'data-block="artifact-inventory"',
+        'data-block="governance"',
         'data-block="evidence"',
         'data-block="criteria"',
         'data-block="contracts"',
@@ -214,10 +247,11 @@ def check_dashboard_html(path: Path) -> tuple[bool, str]:
         'data-block="patch-plan"',
     ]
     design_dense_markers = [
-        'data-agent-card="',
-        'data-block="business-function"',
+        'data-unit-card="',
+        'data-block="boundary"',
         'data-block="control"',
         'data-block="mechanism"',
+        'data-block="governance"',
         'data-block="contracts"',
         'data-block="evaluation"',
         'data-block="delivery"',
@@ -235,15 +269,23 @@ def validate_structured_agent(path: Path) -> tuple[bool, str]:
     if missing:
         return False, f"{path.name}: missing_keys={sorted(missing)}"
 
+    metadata = payload.get("metadata", {})
+    if metadata.get("unit_kind") not in {"agent", "pack", "workflow"}:
+        return False, f"{path.name}: unit_kind_invalid"
+
     criteria = payload.get("criteria", [])
     if not isinstance(criteria, list) or len(criteria) != 10:
         return False, f"{path.name}: criteria_count={len(criteria) if isinstance(criteria, list) else 'invalid'}"
 
+    artifact_inventory = payload.get("artifact_inventory", [])
     evidence_points = payload.get("evidence_points", [])
     backlog = payload.get("backlog", [])
     patch_plan = payload.get("patch_plan", [])
     contracts = payload.get("contracts", {})
+    governance = payload.get("governance", {})
 
+    if not isinstance(artifact_inventory, list) or len(artifact_inventory) < 3:
+        return False, f"{path.name}: artifact_inventory={len(artifact_inventory) if isinstance(artifact_inventory, list) else 'invalid'}"
     if not isinstance(evidence_points, list) or len(evidence_points) < 3:
         return False, f"{path.name}: evidence_points={len(evidence_points) if isinstance(evidence_points, list) else 'invalid'}"
     if not isinstance(backlog, list) or len(backlog) < 3:
@@ -252,6 +294,9 @@ def validate_structured_agent(path: Path) -> tuple[bool, str]:
         return False, f"{path.name}: patch_plan={len(patch_plan) if isinstance(patch_plan, list) else 'invalid'}"
     if not isinstance(contracts, dict) or not contracts.get("current_contract") or not contracts.get("target_contract"):
         return False, f"{path.name}: contracts_incomplete"
+    required_governance = {"owner_boundary", "route_matrix", "proof_surfaces", "deployment_visibility", "rollout", "preparedness"}
+    if not isinstance(governance, dict) or required_governance - set(governance):
+        return False, f"{path.name}: governance_incomplete"
 
     return True, path.name
 
@@ -277,13 +322,20 @@ def validate_structured_design(path: Path) -> tuple[bool, str]:
     if missing:
         return False, f"{path.name}: missing_keys={sorted(missing)}"
 
+    metadata = payload.get("metadata", {})
+    if metadata.get("unit_kind") not in {"agent", "pack", "workflow"}:
+        return False, f"{path.name}: unit_kind_invalid"
     summary = payload.get("summary", {})
+    governance = payload.get("governance", {})
     if not isinstance(summary.get("readiness_score"), int):
         return False, f"{path.name}: readiness_score_missing"
     if not payload.get("control_spec", {}).get("sop"):
         return False, f"{path.name}: missing_control_sop"
     if not payload.get("mechanism_spec", {}).get("tools"):
         return False, f"{path.name}: missing_tools"
+    required_governance = {"owner_boundary", "routes", "owned_surfaces", "proof_surfaces", "deployment_visibility", "rollout", "preparedness"}
+    if not isinstance(governance, dict) or required_governance - set(governance):
+        return False, f"{path.name}: governance_incomplete"
     if not payload.get("delivery_plan", {}).get("phases"):
         return False, f"{path.name}: missing_delivery_phases"
     if not payload.get("evaluation_plan", {}).get("scenarios"):
@@ -359,7 +411,7 @@ def check_design_content(artifacts: dict[str, list[Path]]) -> list[dict]:
     design_paths = artifacts.get("agent_designs", [])
     combined = read_many(design_paths)
 
-    required_sections = ["idef0", "contracts", "evaluation plan", "delivery plan", "control", "mechanism"]
+    required_sections = ["idef0", "contracts", "evaluation plan", "delivery plan", "control", "mechanism", "governance"]
     section_hits = sum(1 for section in required_sections if section in combined.lower())
     add_check(checks, "design_markdown_sections", section_hits >= 4, f"section_hits={section_hits}")
 

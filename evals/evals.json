@@ -3,20 +3,20 @@
   "evals": [
     {
       "id": "trigger-01",
-      "prompt": "/roleframe design Agent for processing product return requests",
-      "expected_output": "The skill activates in design mode and frames the task as an engineering workflow for agent development.",
+      "prompt": "/roleframe design agent Agent for processing product return requests",
+      "expected_output": "The skill activates in design mode and frames the task as a governance-unit design workflow.",
       "files": [],
       "assertions": [
         "The response recognizes design mode.",
-        "The response frames the task as agent development rather than a generic assistant idea.",
-        "The response asks about business result, consumer, and success criteria before implementation detail."
+        "The response frames the task as unit design rather than a generic assistant idea.",
+        "The response asks about boundary, consumer, and success criteria before implementation detail."
       ],
       "tags": ["trigger", "positive", "design"]
     },
     {
       "id": "trigger-02",
-      "prompt": "/roleframe review agents/1c",
-      "expected_output": "The skill activates in review mode and starts discovery of agent artifacts from the provided path.",
+      "prompt": "/roleframe review agent agents/1c",
+      "expected_output": "The skill activates in review mode and starts discovery of unit artifacts from the provided path.",
       "files": [],
       "assertions": [
         "The response recognizes review mode.",
@@ -33,7 +33,7 @@
       "assertions": [
         "The response is in Russian.",
         "The response frames the request as engineering design.",
-        "The response asks what business result the agent must return."
+        "The response asks какой бизнес-результат должен вернуть unit."
       ],
       "tags": ["trigger", "positive", "design", "ru"]
     },
@@ -44,8 +44,8 @@
       "files": [],
       "assertions": [
         "The response is in Russian.",
-        "The response frames the task as an audit.",
-        "The response asks for or starts project-level discovery of agent artifacts."
+        "The response frames the task as audit of units and artifacts.",
+        "The response asks for or starts project-level discovery."
       ],
       "tags": ["trigger", "positive", "review", "ru"]
     },
@@ -75,25 +75,49 @@
     },
     {
       "id": "trigger-07",
-      "prompt": "I need to design a multi-agent system for customer support",
-      "expected_output": "The skill auto-activates in design mode.",
+      "prompt": "I need to design a workflow for customer support",
+      "expected_output": "The skill auto-activates in design mode and pushes toward decomposition before implementation.",
       "files": [],
       "assertions": [
-        "The response frames the task as agent development.",
-        "The response checks whether the requested function needs decomposition.",
+        "The response frames the task as governance-unit design.",
+        "The response checks whether the requested contour needs decomposition.",
         "The response asks about the consumer and output format."
       ],
       "tags": ["trigger", "positive", "design"]
     },
     {
       "id": "trigger-08",
-      "prompt": "Audit the agent maturity",
-      "expected_output": "The skill auto-activates in review mode.",
+      "prompt": "Audit the pack maturity",
+      "expected_output": "The skill auto-activates in review mode and treats the task as a pack-aware audit.",
       "files": [],
       "assertions": [
         "The response frames the task as an audit.",
         "The response refers to discovery, maturity criteria, or evidence-based scoring.",
         "The response asks for a path or starts discovery."
+      ],
+      "tags": ["trigger", "positive", "review"]
+    },
+    {
+      "id": "trigger-09",
+      "prompt": "/roleframe design pack Pack for donor skill intake",
+      "expected_output": "The skill recognizes the pack profile explicitly.",
+      "files": [],
+      "assertions": [
+        "The response recognizes design mode.",
+        "The response treats the brief as a pack profile, not as a single agent.",
+        "The response asks about owner boundary, routes, and proof surfaces."
+      ],
+      "tags": ["trigger", "positive", "design"]
+    },
+    {
+      "id": "trigger-10",
+      "prompt": "/roleframe review pack evals/files/sample-pack",
+      "expected_output": "The skill recognizes the pack profile review explicitly.",
+      "files": [],
+      "assertions": [
+        "The response recognizes review mode.",
+        "The response treats the target as a pack review.",
+        "The response mentions manifests, routes, tests, or proof surfaces in discovery."
       ],
       "tags": ["trigger", "positive", "review"]
     },
@@ -117,19 +141,19 @@
       "assertions": [
         "The response stays focused on bug fixing.",
         "The response does not switch into audit mode.",
-        "The response does not ask business-function questions unrelated to the bug."
+        "The response does not ask boundary questions unrelated to the bug."
       ],
       "tags": ["trigger", "negative"]
     },
     {
       "id": "trigger-negative-03",
       "prompt": "Create a dashboard for sales metrics",
-      "expected_output": "The skill must not activate because the request is not about agent design or agent audits.",
+      "expected_output": "The skill must not activate because the request is not about governance-unit design or review.",
       "files": [],
       "assertions": [
         "The response treats the dashboard as a generic analytics task.",
-        "The response does not require RoleFrame design or audit artifacts.",
-        "The response does not mention agent maturity."
+        "The response does not require RoleFrame artifacts.",
+        "The response does not mention unit maturity."
       ],
       "tags": ["trigger", "negative"]
     },
@@ -148,59 +172,72 @@
     {
       "id": "trigger-negative-05",
       "prompt": "Help me with my 1C configuration",
-      "expected_output": "The skill must not activate because the request is domain support, not agent design.",
+      "expected_output": "The skill must not activate because the request is domain support, not governance-unit design.",
       "files": [],
       "assertions": [
         "The response stays on the 1C task.",
         "The response does not route to roleframe.",
-        "The response does not ask for agent paths or audit files."
+        "The response does not ask for review artifacts."
       ],
       "tags": ["trigger", "negative"]
     },
     {
       "id": "functional-design-d1",
-      "prompt": "/roleframe design Agent that converts a fuzzy user request into a structured query to a product catalog",
-      "expected_output": "A full single-agent design package with IDEF0, explicit control/mechanism split, delivery plan, structured design JSON, and dashboard build.",
+      "prompt": "/roleframe design agent Agent that converts a fuzzy user request into a structured query to a product catalog",
+      "expected_output": "A full single-unit design package with IDEF0, explicit control/mechanism split, governance block, structured design JSON, and a dashboard build.",
       "files": [],
       "assertions": [
-        "The response asks about business function, consumer, inputs, success criteria, and output format.",
+        "The response asks about boundary, consumer, inputs, success criteria, and output format.",
         "The response contains an IDEF0 card with Input, Control, Mechanism, and Output.",
         "The response labels what belongs to Control and what belongs to Mechanism.",
-        "The response includes runtime, eval, observability, and change-management planning.",
-        "The response creates or clearly intends structured design JSON, rendered markdown views, and dashboard HTML under docs/agent_design."
+        "The response includes governance: owner boundary, routes, proof surfaces, rollout, and preparedness.",
+        "The response creates or clearly intends structured design JSON, rendered markdown views, and dashboard HTML under docs/roleframe/design."
       ],
       "tags": ["functional", "design"]
     },
     {
       "id": "functional-design-d2",
-      "prompt": "/roleframe design System for end-to-end processing of tax authority requests: extract requirements, find documents, prepare response, archive",
-      "expected_output": "A decomposed multi-agent design package with routing contract, delivery plan, structured design artifacts, and dashboard build.",
+      "prompt": "/roleframe design workflow System for end-to-end processing of tax authority requests: extract requirements, find documents, prepare response, archive",
+      "expected_output": "A decomposed workflow design package with route contracts, governance, structured design artifacts, and a dashboard build.",
       "files": [],
       "assertions": [
-        "The response rejects a single-agent framing as too broad.",
-        "The response proposes 3 to 4 agents with rationale.",
-        "The response includes a supervisor or routing role.",
-        "The response defines a routing contract between agents.",
-        "The response includes a delivery plan and creates or clearly intends docs/agent_design artifacts plus dashboard HTML."
+        "The response rejects a single-unit framing as too broad.",
+        "The response proposes 3 to 4 child units with rationale.",
+        "The response explicitly treats the brief as a workflow profile.",
+        "The response defines route contracts between units.",
+        "The response includes a delivery plan and creates or clearly intends docs/roleframe/design artifacts plus dashboard HTML."
       ],
-      "tags": ["functional", "design", "multi-agent"]
+      "tags": ["functional", "design", "workflow"]
     },
     {
       "id": "functional-design-d3",
       "prompt": "/roleframe design Smart assistant for our company",
-      "expected_output": "The skill pushes back on the vague brief and asks for a concrete business result.",
+      "expected_output": "The skill pushes back on the vague brief and asks for a concrete boundary.",
       "files": [],
       "assertions": [
         "The response does not accept the vague request as-is.",
-        "The response asks what specific business result the agent must return.",
+        "The response asks what specific business result or owner boundary the unit must return.",
         "The response hints at decomposition if the user describes multiple functions."
       ],
       "tags": ["functional", "design", "edge-case"]
     },
     {
+      "id": "functional-design-d4",
+      "prompt": "/roleframe design pack Pack for donor skill intake with explicit routes, proof surfaces, and staged rollout",
+      "expected_output": "A pack-profile design package with governance-first design and no parallel owner surfaces.",
+      "files": [],
+      "assertions": [
+        "The response treats the brief as a pack profile.",
+        "The response asks about owner boundary, owned surfaces, and proof surfaces.",
+        "The response includes routes, deployment visibility, rollout, and preparedness.",
+        "The response avoids collapsing the pack into a single agent function."
+      ],
+      "tags": ["functional", "design", "pack"]
+    },
+    {
       "id": "functional-review-r1",
       "prompt": "/roleframe review evals/files/sample-agents/agents",
-      "expected_output": "A full review over the fixture agents with discovery, evidence-driven findings, structured audit JSON files, rendered markdown views, and a dashboard build.",
+      "expected_output": "A full review over the legacy agent fixtures with discovery, evidence-driven findings, structured audit JSON files, rendered markdown views, and a dashboard build.",
       "files": [
         "evals/files/sample-agents/agents/supervisor.md",
         "evals/files/sample-agents/agents/document-finder.md",
@@ -210,11 +247,11 @@
         "evals/expected-findings.md"
       ],
       "assertions": [
-        "The response starts with discovery or inventory of agent-related artifacts in the supplied path.",
+        "The response starts with discovery or inventory of unit-related artifacts in the supplied path.",
         "The response discovers all fixture agent files.",
         "The response resolves the placeholder include used by the supervisor fixture.",
         "The response cites concrete file paths or file:line evidence.",
-        "The response includes cross-agent analysis or overlap findings.",
+        "The response includes cross-unit analysis or overlap findings.",
         "The response creates or clearly intends structured audit JSON, rendered markdown views, and dashboard HTML as review artifacts."
       ],
       "tags": ["functional", "review"]
@@ -233,8 +270,8 @@
     },
     {
       "id": "functional-review-r3",
-      "prompt": "/roleframe review evals/files/sample-agents/agents/supervisor.md",
-      "expected_output": "The skill reviews a single agent artifact deeply, still using discovery for related assets and still producing review artifacts.",
+      "prompt": "/roleframe review agent evals/files/sample-agents/agents/supervisor.md",
+      "expected_output": "The skill reviews a single agent-profile unit deeply, still using discovery for related assets and still producing review artifacts.",
       "files": [
         "evals/files/sample-agents/agents/supervisor.md",
         "evals/files/sample-agents/prompts/agents/supervisor.txt"
@@ -245,12 +282,51 @@
         "The response still applies the audit structure.",
         "The response still treats review as an artifact-producing workflow rather than a one-off text critique."
       ],
-      "tags": ["functional", "review", "single-agent"]
+      "tags": ["functional", "review", "single-unit"]
+    },
+    {
+      "id": "functional-review-r4",
+      "prompt": "/roleframe review pack evals/files/sample-pack",
+      "expected_output": "A pack-aware review over manifest, route, proof, rollout, and prompt artifacts with structured review output.",
+      "files": [
+        "evals/files/sample-pack/pack.json",
+        "evals/files/sample-pack/routes/intake-donor-skill.route.json",
+        "evals/files/sample-pack/tests/contract-checks.md",
+        "evals/files/sample-pack/proofs/intake-proof.md",
+        "evals/files/sample-pack/rollout/plan.md",
+        "evals/files/sample-pack/SKILL.md",
+        "evals/expected-pack-findings.md"
+      ],
+      "assertions": [
+        "The response starts with artifact inventory rather than prompt-only archaeology.",
+        "The response discovers manifest, route, tests, and proof surfaces.",
+        "The response uses manifest or proof evidence, not prompt evidence alone.",
+        "The response includes governance findings about owner boundary, route contract, visibility, or preparedness.",
+        "The response creates or clearly intends structured audit JSON, rendered markdown views, and dashboard HTML under docs/roleframe/review."
+      ],
+      "tags": ["functional", "review", "pack"]
+    },
+    {
+      "id": "functional-review-r5",
+      "prompt": "/roleframe review evals/files/sample-mixed",
+      "expected_output": "A mixed-profile review that discovers both agent and pack signals and applies profile-aware analysis.",
+      "files": [
+        "evals/files/sample-mixed/agents/coordinator.md",
+        "evals/files/sample-mixed/pack.json",
+        "evals/files/sample-mixed/routes/donor.route.json"
+      ],
+      "assertions": [
+        "The response discovers both agent and pack artifacts.",
+        "The response applies profile-aware framing instead of one universal prompt-archeology pass.",
+        "The response mentions route or contract matrix implications across profiles.",
+        "The response still produces structured review artifacts."
+      ],
+      "tags": ["functional", "review", "mixed"]
     },
     {
       "id": "comparison-a",
       "prompt": "Design an agent for processing product return requests",
-      "expected_output": "With the skill, the design should be more structured than the baseline and include IDEF0, explicit contracts, and delivery planning.",
+      "expected_output": "With the skill, the design should be more structured than the baseline and include IDEF0, governance, explicit contracts, and delivery planning.",
       "files": [],
       "assertions": [
         "The with-skill output contains an IDEF0 structure.",
@@ -271,6 +347,22 @@
         "The with-skill output contains a stable audit structure.",
         "The with-skill output cites file evidence.",
         "The with-skill output includes actionable backlog items."
+      ],
+      "tags": ["comparison", "baseline", "review"]
+    },
+    {
+      "id": "comparison-c",
+      "prompt": "Review the pack in evals/files/sample-pack",
+      "expected_output": "With the skill, the review should inventory manifests, routes, proofs, and rollout signals instead of relying on prompt-only critique.",
+      "files": [
+        "evals/files/sample-pack/pack.json",
+        "evals/files/sample-pack/routes/intake-donor-skill.route.json",
+        "evals/files/sample-pack/proofs/intake-proof.md"
+      ],
+      "assertions": [
+        "The with-skill output inventories pack artifacts.",
+        "The with-skill output cites manifest or proof evidence.",
+        "The with-skill output includes governance findings."
       ],
       "tags": ["comparison", "baseline", "review"]
     }

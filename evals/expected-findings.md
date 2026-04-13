@@ -15,7 +15,7 @@ The goal is not to force identical wording. The goal is to make sure the skill c
 | Tool failure strategy is weak | The review flags that document-finder has no reliable timeout or failure policy. | `evals/files/sample-agents/agents/document-finder.md` |
 | Handoff payload is untyped | The review says document-finder passes results without a fixed structure. | `evals/files/sample-agents/agents/document-finder.md` |
 | Unsafe completion behavior exists | The review flags that response-drafter is allowed to fill gaps from context. | `evals/files/sample-agents/agents/response-drafter.md` |
-| Eval and ops gaps remain | The review says the fixture exists, but agent-level eval coverage, observability, and change checks are still partial. | `evals/evals.json`, `evals/functional-tests.md`, absence in sample agent fixture |
+| Eval and ops gaps remain | The review says the fixture exists, but unit-level eval coverage, observability, and change checks are still partial. | `evals/evals.json`, `evals/functional-tests.md`, absence in sample agent-profile fixture |
 
 ## Acceptance rule
 
@@ -24,7 +24,7 @@ The goal is not to force identical wording. The goal is to make sure the skill c
 - At least 5 of the 8 canonical finding categories appear in the audit package.
 - The generated findings cite file evidence with `file:line` or `file#Lx-Ly`.
 - The backlog contains concrete actions, not only summaries.
-- Cross-agent analysis mentions the supervisor handoff problem when more than one fixture agent is reviewed.
+- Cross-unit analysis mentions the supervisor handoff problem when more than one fixture unit is reviewed.
 
 ## Notes for evaluators
 

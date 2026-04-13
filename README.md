@@ -1,52 +1,56 @@
 # roleframe
 
-RoleFrame is a skill for designing and reviewing AI agent systems through IDEF0:
+RoleFrame is a skill for designing and reviewing AI systems through IDEF0. It keeps the same Control vs Mechanism split, but the canonical object is now a **governance unit** with one of three profiles:
 
-- `Input`: what starts the function
-- `Control`: role, SOP, constraints, output contract
-- `Mechanism`: tools, memory, runtime, model
-- `Output`: success, empty result, failure, delegation
+- `agent`, one business function
+- `pack`, one ownership boundary with explicit routes and proof surfaces
+- `workflow`, one orchestration contour that must be decomposed before audit
 
-The repository is built as a public reference implementation for the [Agent Skills](https://agentskills.io/home) format. It is written for Claude Code first, but follows the portable `SKILL.md` layout.
+The intended deployment model is hybrid:
+
+- the global core defines methodology, schemas, validators, and renderers
+- a project-local profile maps the core onto local owner surfaces, proof surfaces, status vocabulary, write policy, and diagnostics placement
 
 ## What it does
 
-RoleFrame has two main modes:
+RoleFrame has two public modes:
 
 | Command | What it does |
 |---|---|
-| `/roleframe design <description>` | Builds an implementation-ready design package for an agent or multi-agent system |
-| `/roleframe review [path]` | Finds agent artifacts in a project and audits them against the RoleFrame maturity model |
+| `/roleframe design [agent|pack|workflow] <description>` | Builds an implementation-ready design package under `docs/roleframe/design` |
+| `/roleframe review [agent|pack|workflow] [path]` | Discovers artifacts and audits governance units under `docs/roleframe/review` |
 
-Russian prompts are supported directly:
+If the profile is omitted, the skill autodetects it from the brief or discovered artifacts.
 
-- `Спроектируй агента для обработки заявок`
-- `Изучи проект, найди всех агентов и проведи их аудит`
-
-The skill keeps its outputs in the user's language. During both `design` and `review`, it also generates `dashboard.html`.
+`dashboard.html` is generated automatically in both modes, but it stays a derived view, not the source of truth.
 
 ![RoleFrame dashboard preview](docs/dashboard.png)
 
 ## Why use it
 
-Many agent reviews stop at prompt wording. RoleFrame treats an agent as a software function with clear boundaries. That makes reviews easier to repeat, audits easier to compare, and design work easier to turn into implementation.
+Many reviews stop at prompt wording. RoleFrame audits the full contract surface: prompt and policy, runtime and adapters, manifests, tests, proof surfaces, rollout signals, and typed contracts.
 
-## Install
+That makes it useful for:
 
-Clone the repository into a skills-compatible client as `roleframe`.
+- new unit design before implementation
+- donor skill and donor pack intake
+- cross-checking prompt text against executable or proof artifacts
+- reducing hidden contradictions between routes, runtime, docs, and rollout state
 
-```bash
-# Claude Code, project-level
-git clone https://github.com/welltraum/roleframe.git .claude/skills/roleframe
+## Method assumptions
 
-# Claude Code, user-level
-git clone https://github.com/welltraum/roleframe.git ~/.claude/skills/roleframe
+RoleFrame keeps the same core:
 
-# OpenAI Codex-compatible agents
-git clone https://github.com/welltraum/roleframe.git .agents/skills/roleframe
-```
+- IDEF0 remains the requirement frame
+- prompt and policy artifacts remain `Control`
+- tools, adapters, runtime, memory, and manifests remain `Mechanism`
+- JSON-first artifacts remain canonical
 
-Then run it with `/roleframe ...` or let the client auto-activate it from the description.
+What changed in `v0.4.1`:
+
+- the canonical unit is no longer agent-only
+- `prompt archaeology` is now an `agent`-profile review tool, not the default for every system
+- canonical package roots moved to `docs/roleframe/design` and `docs/roleframe/review`
 
 ## Repository layout
 
@@ -55,53 +59,63 @@ roleframe/
 ├── SKILL.md
 ├── README.md
 ├── assets/        # dashboard template
-├── references/    # methodology, templates, checklists
-├── evals/         # eval cases, generated docs, sample files
-├── scripts/       # validation, rendering, and eval helpers
-└── eval-workspace/
+├── docs/          # methodology references and preview assets
+├── references/    # schemas, templates, anti-patterns, playbooks
+├── evals/         # eval cases, fixtures, generated docs
+└── scripts/       # validation, rendering, and eval helpers
 ```
+
+## Canonical artifacts
+
+Design packages:
+
+- `docs/roleframe/design/NN_name.design.json`
+- `docs/roleframe/design/summary.design.json`
+- derived views next to them: `NN_name.md`, `README.md`, `dashboard.html`
+
+Review packages:
+
+- `docs/roleframe/review/NN_name.audit.json`
+- `docs/roleframe/review/summary.audit.json`
+- derived views next to them: `NN_name.md`, `README.md`, `dashboard.html`
+
+Legacy `docs/agent_design` and `docs/agent_audit` are read-only compatibility roots. New canonical output should not be generated there.
+
+Project-local profiles may project review outputs into repo diagnostics surfaces such as `output/diagnostics/<date>_packframe/`, but the review package remains derived. Only accepted structural facts should be promoted back into manifests, docs, or tests.
 
 ## Eval workflow
 
-`evals/evals.json` is the source of truth. Markdown files in `evals/` are generated from it.
+`evals/evals.json` is the source of truth. The markdown files in `evals/` are generated from it.
 
 Typical loop:
 
 ```bash
-# 1. Validate the skill
 UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
   uv run scripts/validate_skill.py --skip-skills-ref
 
-# 2. Regenerate eval docs if evals.json changed
 UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
   uv run scripts/render_eval_docs.py
 
-# 3. Prepare a clean workspace
 UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
   uv run scripts/prepare_eval.py --iteration 1 --wave 1
 
-# 4. Run with-skill / without-skill sessions manually
-#    Save outputs into eval-workspace/iteration-1/.../outputs
+# run with-skill / without-skill sessions manually
 
-# 5. Check required artifacts
 UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
   uv run scripts/check_eval_artifacts.py --iteration-dir eval-workspace/iteration-1
 
-# 6. Fill grading.json and timing.json, then aggregate results
 UV_CACHE_DIR=.cache/uv XDG_DATA_HOME=.cache/uv-data XDG_BIN_HOME=.cache/uv-bin \
   uv run scripts/benchmark_eval.py --iteration-dir eval-workspace/iteration-1
 ```
 
-Useful runbooks:
+Useful references:
 
 - [`evals/review-dashboard-runbook.md`](evals/review-dashboard-runbook.md)
 - [`evals/expected-findings.md`](evals/expected-findings.md)
 
-The eval setup follows the [Agent Skills guidance on structured evals](https://agentskills.io/skill-creation/evaluating-skills): trigger cases, functional cases, with-skill vs without-skill comparison, timing and token capture, grading, and artifact checks.
-
 ## Validation
 
-Run the official validator and the local checks:
+Run the official validator and local checks:
 
 ```bash
 uvx --from git+https://github.com/agentskills/agentskills#subdirectory=skills-ref \
@@ -110,43 +124,31 @@ uvx --from git+https://github.com/agentskills/agentskills#subdirectory=skills-re
 uv run scripts/validate_skill.py --skip-skills-ref
 ```
 
-The local validator checks:
+Local checks cover:
 
-- required frontmatter
-- `name` consistency with the directory name
-- approximate token budget for `SKILL.md`
-- broken relative links from `SKILL.md` and `references/*.md`
+- frontmatter and package shape
+- link integrity
 - `evals/evals.json`
-- generated eval docs are in sync
-
-Renderer checks cover:
-
-- `*.audit.json` schema completeness
-- `*.design.json` schema completeness
-- maturity criteria
-- evidence presence
-- review contracts
-- design delivery, eval, and runtime blocks
+- generated eval docs
+- structured design and review package schemas
+- canonical artifact placement under `docs/roleframe/*`
 
 Examples:
 
 ```bash
-uv run scripts/render_audit_package.py --input evals/files/sample-audits --output /tmp/roleframe-audit --check
-uv run scripts/render_roleframe_package.py --kind review --input evals/files/sample-audits --output /tmp/roleframe-audit --check
+uv run scripts/render_roleframe_package.py --kind review --input evals/files/sample-audits --output /tmp/roleframe-review --check
 uv run scripts/render_roleframe_package.py --kind design --input evals/files/sample-design-package --output /tmp/roleframe-design --check
 ```
 
-`scripts/check_eval_artifacts.py` verifies the manual outputs that benchmarking depends on, including response exports, design or audit packages, markdown views, and `dashboard.html`.
+## Release gate
 
-## Release
-
-`v0.3.0` is releasable only if all of this is true:
+`v0.4.1` is releasable only if:
 
 - `skills-ref validate .` passes
 - `uv run scripts/validate_skill.py` passes
-- the selected trigger and functional evals are green
+- selected trigger and functional evals are green
 - benchmark output exists for the current iteration
-- install instructions work on a clean machine
+- generated outputs land in `docs/roleframe/*` and dashboards stay derived
 
 ## License
 

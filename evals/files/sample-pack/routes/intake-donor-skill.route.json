@@ -1,0 +1,7 @@
+{
+  "name": "intake-donor-skill",
+  "consumer": "donor-intake",
+  "mode": "hidden",
+  "payload": "Pass the donor skill request as concise prose plus any nearby notes.",
+  "fallback": "If the route looks unsafe, leave a warning in markdown."
+}

@@ -20,15 +20,20 @@ FIRST_WAVE_IDS = {
     "functional-design-d1",
     "functional-design-d2",
     "functional-design-d3",
+    "functional-design-d4",
     "functional-review-r1",
+    "functional-review-r4",
     "comparison-a",
     "comparison-b",
+    "comparison-c",
 }
 
 BLOCKING_IDS = {
     "functional-design-d1",
     "functional-design-d2",
+    "functional-design-d4",
     "functional-review-r1",
+    "functional-review-r4",
 }
 
 

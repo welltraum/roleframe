@@ -34,21 +34,29 @@ The purpose is simple: catch Skills that are too underspecified for smaller mode
 
 - Review testbed: [`evals/files/sample-agents`](./files/sample-agents)
 - Review dashboard smoke fixture: [`evals/files/sample-audits`](./files/sample-audits)
+- Pack review smoke fixture: [`evals/files/sample-pack`](./files/sample-pack)
+- Mixed-profile smoke fixture: [`evals/files/sample-mixed`](./files/sample-mixed)
 - Design package smoke fixture: [`evals/files/sample-design-package`](./files/sample-design-package)
 - Expected findings baseline: [`evals/expected-findings.md`](./expected-findings.md)
+- Pack findings baseline: [`evals/expected-pack-findings.md`](./expected-pack-findings.md)
 
 ## Output convention
 
 Store generated artifacts under each run's `outputs/` directory.
 
 - Raw model response: `outputs/response.md`
-- Structured audit package: `outputs/docs/agent_audit/*.audit.json`
-- Rendered audit views: `outputs/docs/agent_audit/*.md`
-- Audit summary: `outputs/docs/agent_audit/README.md`
-- Structured summary: `outputs/docs/agent_audit/summary.audit.json`
-- Dashboard HTML: `outputs/docs/agent_audit/dashboard.html`
+- Structured review package: `outputs/docs/roleframe/review/*.audit.json`
+- Rendered review views: `outputs/docs/roleframe/review/*.md`
+- Review summary: `outputs/docs/roleframe/review/README.md`
+- Structured review summary: `outputs/docs/roleframe/review/summary.audit.json`
+- Structured design package: `outputs/docs/roleframe/design/*.design.json`
+- Rendered design views: `outputs/docs/roleframe/design/*.md`
+- Design summary: `outputs/docs/roleframe/design/README.md`
+- Dashboard HTML: `outputs/docs/roleframe/review/dashboard.html` or `outputs/docs/roleframe/design/dashboard.html`
 
 If the client exports a raw response with a different extension, normalize it to `response.md` before grading.
+
+If a project-local profile mirrors the package into a repo diagnostics surface, treat that mirror as a placement adapter only. The grading target remains the canonical `docs/roleframe/*` package shape.
 
 ## Workflow
 
@@ -86,9 +94,9 @@ If the client exports a raw response with a different extension, normalize it to
    This check now validates both file presence and minimal content signals. In particular:
 
    - review outputs must include structured audit JSON plus rendered markdown views
-   - review outputs must include evidence references in the audit package
-   - review dashboard HTML must contain dense agent blocks for evidence, criteria, contracts, backlog, and patch plan
-   - design dashboard HTML must contain dense agent blocks for business function, control, mechanism, contracts, evaluation, and delivery
+   - review outputs must include artifact inventory, governance, and evidence references in the audit package
+   - review dashboard HTML must contain dense unit blocks for artifact inventory, governance, evidence, criteria, contracts, backlog, and patch plan
+   - design dashboard HTML must contain dense unit blocks for boundary, control, mechanism, governance, contracts, evaluation, and delivery
    - `functional-review-r1` is checked against the expected findings baseline heuristically
 
 6. Fill `grading.json` and `timing.json` for each completed run.

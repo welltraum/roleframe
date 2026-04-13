@@ -20,6 +20,8 @@ from render_audit_package import (
     render_link_pill,
     render_overview_cards,
     render_package as render_review_package,
+    unit_kind_label,
+    unit_noun,
     write_text,
 )
 
@@ -31,6 +33,7 @@ DESIGN_AGENT_REQUIRED = {
     "idef0",
     "control_spec",
     "mechanism_spec",
+    "governance",
     "contracts",
     "dependencies",
     "evaluation_plan",
@@ -82,6 +85,7 @@ def validate_design_agent(path: Path, payload: dict) -> None:
     ensure(not missing, f"{path.name} is missing keys: {sorted(missing)}")
 
     metadata = payload["metadata"]
+    ensure(metadata.get("unit_kind") in {"agent", "pack", "workflow"}, f"{path.name}: metadata.unit_kind must be agent, pack, or workflow")
     for field in ["name", "language", "source_context", "designed_at"]:
         ensure(isinstance(metadata.get(field), str) and metadata[field], f"{path.name}: metadata.{field} is required")
 
@@ -128,6 +132,15 @@ def validate_design_agent(path: Path, payload: dict) -> None:
     evaluation = payload["evaluation_plan"]
     for field in ["scenarios", "metrics", "regression"]:
         ensure(isinstance(evaluation.get(field), list) and evaluation[field], f"{path.name}: evaluation_plan.{field} must be a non-empty list")
+
+    governance = payload["governance"]
+    ensure(isinstance(governance.get("owner_boundary"), str) and governance["owner_boundary"], f"{path.name}: governance.owner_boundary is required")
+    ensure(isinstance(governance.get("routes"), list) and governance["routes"], f"{path.name}: governance.routes must be a non-empty list")
+    for index, item in enumerate(governance["routes"], start=1):
+        for field in ["name", "consumer", "contract", "risk"]:
+            ensure(isinstance(item.get(field), str) and item[field], f"{path.name}: governance.routes[{index}].{field} is required")
+    for field in ["owned_surfaces", "proof_surfaces", "deployment_visibility", "rollout", "preparedness"]:
+        ensure(isinstance(governance.get(field), list) and governance[field], f"{path.name}: governance.{field} must be a non-empty list")
 
     delivery = payload["delivery_plan"]
     for field in ["observability", "change_management"]:
@@ -191,8 +204,6 @@ def render_design_markdown_agent(agent: dict) -> str:
     language = agent["metadata"]["language"]
     in_scope_label = "В scope" if language == "ru" else "In scope"
     out_of_scope_label = "Вне scope" if language == "ru" else "Out of scope"
-    control_label = "Control" if language == "en" else "Control"
-    mechanism_label = "Mechanism" if language == "en" else "Mechanism"
     readiness_label = "Готовность" if language == "ru" else "Readiness"
     constraints_label = "Ограничения" if language == "ru" else "Constraints"
     contracts_label = "Контракты" if language == "ru" else "Contracts"
@@ -208,7 +219,7 @@ def render_design_markdown_agent(agent: dict) -> str:
     delivery_label = "План внедрения" if language == "ru" else "Delivery plan"
     observability_label = "Наблюдаемость" if language == "ru" else "Observability"
     change_mgmt_label = "Управление изменениями" if language == "ru" else "Change management"
-    lines = [f"# Проектирование: агент `{agent['metadata']['name']}`" if language == "ru" else f"# Design: agent `{agent['metadata']['name']}`", ""]
+    lines = [f"# Проектирование: unit `{agent['metadata']['name']}`" if language == "ru" else f"# Design: unit `{agent['metadata']['name']}`", ""]
     lines.extend(
         [
             "## Краткий вердикт" if language == "ru" else "## Verdict",
@@ -217,7 +228,11 @@ def render_design_markdown_agent(agent: dict) -> str:
             "",
             agent["summary"]["verdict"],
             "",
-            "## Бизнес-функция" if language == "ru" else "## Business function",
+            "## Профиль" if language == "ru" else "## Profile",
+            "",
+            f"`{unit_kind_label(agent['metadata']['unit_kind'], language)}`",
+            "",
+            "## Граница" if language == "ru" else "## Boundary",
             "",
             f"- **{'Цель' if language == 'ru' else 'Goal'}**: {agent['business_function']['goal']}",
             f"- **{'Потребитель' if language == 'ru' else 'Consumer'}**: {agent['business_function']['consumer']}",
@@ -234,7 +249,7 @@ def render_design_markdown_agent(agent: dict) -> str:
     lines.extend(["", "## IDEF0", ""])
     for quadrant in ["input", "control", "mechanism", "output"]:
         lines.append(f"- **{quadrant.title()}**: {agent['idef0'][quadrant]}")
-    lines.extend(["", f"## {control_label}", ""])
+    lines.extend(["", "## Control", ""])
     lines.append(f"- **{'Роль' if language == 'ru' else 'Role'}**: {agent['control_spec']['role']}")
     lines.append("")
     lines.append("### SOP")
@@ -242,7 +257,7 @@ def render_design_markdown_agent(agent: dict) -> str:
     lines.extend(f"{index}. {item}" for index, item in enumerate(agent["control_spec"]["sop"], start=1))
     lines.extend(["", f"### {constraints_label}", ""])
     lines.extend(f"- {item}" for item in agent["control_spec"]["constraints"])
-    lines.extend(["", f"## {mechanism_label}", ""])
+    lines.extend(["", "## Mechanism", ""])
     lines.append(
         "| Инструмент | Назначение | Режим сбоя |" if language == "ru" else "| Tool | Purpose | Failure mode |"
     )
@@ -255,6 +270,30 @@ def render_design_markdown_agent(agent: dict) -> str:
             f"- **{'Memory strategy' if language == 'en' else 'Стратегия памяти'}**: {agent['mechanism_spec']['memory_strategy']}",
             f"- **{'Runtime loop' if language == 'en' else 'Runtime loop'}**: {agent['mechanism_spec']['runtime_loop']}",
             f"- **{'Error handling' if language == 'en' else 'Обработка ошибок'}**: {agent['mechanism_spec']['error_handling']}",
+            "",
+            "## Governance",
+            "",
+            f"- **Owner boundary**: {agent['governance']['owner_boundary']}",
+            "",
+            "### Routes",
+            "",
+            "| Route | Consumer | Contract | Risk |",
+            "|---|---|---|---|",
+        ]
+    )
+    for item in agent["governance"]["routes"]:
+        lines.append(f"| `{item['name']}` | `{item['consumer']}` | {item['contract']} | {item['risk']} |")
+    for field, label in [
+        ("owned_surfaces", "Owned surfaces"),
+        ("proof_surfaces", "Proof surfaces"),
+        ("deployment_visibility", "Deployment visibility"),
+        ("rollout", "Rollout"),
+        ("preparedness", "Preparedness"),
+    ]:
+        lines.extend(["", f"### {label}", ""])
+        lines.extend(f"- {item}" for item in agent["governance"][field])
+    lines.extend(
+        [
             "",
             f"## {contracts_label}",
             "",
@@ -312,7 +351,7 @@ def render_design_markdown_agent(agent: dict) -> str:
 def render_design_markdown_summary(agents: list[dict], summary: dict) -> str:
     language = summary["language"]
     lines = [
-        "# Проектирование агентов (методология RoleFrame)" if language == "ru" else "# Agent design (RoleFrame methodology)",
+        "# Проектирование units (методология RoleFrame)" if language == "ru" else "# Unit design (RoleFrame methodology)",
         "",
         summary["overall_verdict"],
         "",
@@ -326,9 +365,9 @@ def render_design_markdown_summary(agents: list[dict], summary: dict) -> str:
             "",
             "## Сводка" if language == "ru" else "## Summary",
             "",
-            "| Агент | Готовность | Уровень | Основной риск | Первая фаза |"
+            "| Unit | Готовность | Уровень | Основной риск | Первая фаза |"
             if language == "ru"
-            else "| Agent | Readiness | Level | Primary risk | First phase |",
+            else "| Unit | Readiness | Level | Primary risk | First phase |",
             "|---|---:|---|---|---|",
         ]
     )
@@ -378,17 +417,17 @@ def render_design_methodology_blocks(summary: dict) -> str:
         {
             "title": "Что уже зафиксировано" if language == "ru" else "What is fixed",
             "items": [
-                "граница функции и потребитель" if language == "ru" else "business boundary and consumer",
+                "boundary, consumer и profile" if language == "ru" else "boundary, consumer, and profile",
                 "Control vs Mechanism split" if language == "ru" else "control vs mechanism split",
-                "типизированные входной, выходной и аварийный контракты" if language == "ru" else "typed input, output, and failure contracts",
+                "typed contracts и governance" if language == "ru" else "typed contracts and governance",
             ],
         },
         {
             "title": "Что ещё внедрить" if language == "ru" else "What still needs implementation",
             "items": [
-                "runtime orchestration и tool wrappers" if language == "ru" else "runtime orchestration and tool wrappers",
-                "eval-сценарии и regression loop" if language == "ru" else "eval scenarios and regression loop",
-                "наблюдаемость, алерты и rollout-checks" if language == "ru" else "observability, alerts, and rollout checks",
+                "runtime orchestration и route adapters" if language == "ru" else "runtime orchestration and route adapters",
+                "eval-сценарии, proof surfaces и regression loop" if language == "ru" else "eval scenarios, proof surfaces, and regression loop",
+                "наблюдаемость, rollout-checks и preparedness" if language == "ru" else "observability, rollout checks, and preparedness",
             ],
         },
     ]
@@ -405,7 +444,7 @@ def render_design_methodology_blocks(summary: dict) -> str:
 
 def render_design_contract_matrix(summary: dict) -> tuple[str, str]:
     language = summary["language"]
-    header = f"<th>{'Агент' if language == 'ru' else 'Agent'}</th>"
+    header = "<th>Unit</th>"
     header += "".join(f"<th>{html.escape(column)}</th>" for column in summary["contract_matrix"]["columns"])
     rows = []
     for row in summary["contract_matrix"]["rows"]:
@@ -419,7 +458,7 @@ def render_design_contract_matrix(summary: dict) -> tuple[str, str]:
 
 def derive_design_matrix(agents: list[dict], language: str) -> tuple[str, str]:
     headers = [
-        "Агент" if language == "ru" else "Agent",
+        "Unit",
         "Граница" if language == "ru" else "Boundary",
         "Control",
         "Mechanism",
@@ -515,21 +554,33 @@ def render_design_agent_card(agent: dict, output_dir: Path) -> str:
     regression_label = "Регрессия" if language == "ru" else "Regression"
     observability_label = "Наблюдаемость" if language == "ru" else "Observability"
     change_mgmt_label = "Управление изменениями" if language == "ru" else "Change management"
+    governance_rows = "\n".join(
+        [
+            "<tr>"
+            f"<td><span class=\"mono\">{html.escape(item['name'])}</span></td>"
+            f"<td><span class=\"mono\">{html.escape(item['consumer'])}</span></td>"
+            f"<td>{html.escape(item['contract'])}</td>"
+            f"<td>{html.escape(item['risk'])}</td>"
+            "</tr>"
+            for item in agent["governance"]["routes"]
+        ]
+    )
     return (
-        f'<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="{html.escape(agent["metadata"]["name"])}">'
+        f'<article class="panel rounded-3xl p-6 space-y-5" data-unit-card="{html.escape(agent["metadata"]["name"])}">'
         '<div class="flex flex-wrap items-center justify-between gap-3">'
         f'<div><h2 class="text-xl font-bold">{html.escape(agent["metadata"]["name"])}</h2>'
         f'<p class="text-sm text-slate-500">{html.escape(agent["summary"]["primary_risk"])}</p></div>'
         f'<div class="flex items-center gap-2"><span class="{badge_class} rounded-full px-3 py-1 text-sm font-bold">{agent["summary"]["readiness_score"]}/100</span>'
-        f'<span class="chip chip-neutral">{html.escape(agent["summary"]["readiness_level"])}</span></div>'
+        f'<span class="chip chip-neutral">{html.escape(agent["summary"]["readiness_level"])}</span>'
+        f'<span class="chip chip-neutral">{html.escape(unit_kind_label(agent["metadata"]["unit_kind"], language))}</span></div>'
         "</div>"
         f'<div class="flex flex-wrap gap-2" data-block="sources">{source_link}</div>'
         '<div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict">'
         f'<div class="font-semibold mb-2">{"Краткий вердикт" if language == "ru" else "Short verdict"}</div>'
         f'<p class="text-sm">{html.escape(agent["summary"]["verdict"])}</p>'
         "</div>"
-        '<div class="rounded-2xl border border-stone-200 p-4" data-block="business-function">'
-        f'<div class="font-semibold mb-3">{"Бизнес-функция" if language == "ru" else "Business function"}</div>'
+        '<div class="rounded-2xl border border-stone-200 p-4" data-block="boundary">'
+        f'<div class="font-semibold mb-3">{"Граница" if language == "ru" else "Boundary"}</div>'
         f'<div class="text-sm"><strong>{"Цель" if language == "ru" else "Goal"}:</strong> {html.escape(agent["business_function"]["goal"])}</div>'
         f'<div class="text-sm mt-2"><strong>{"Потребитель" if language == "ru" else "Consumer"}:</strong> {html.escape(agent["business_function"]["consumer"])}</div>'
         f'<ul class="list-disc pl-5 mt-3 space-y-1 text-sm">{html_list_items(agent["business_function"]["success_criteria"])}</ul>'
@@ -555,6 +606,19 @@ def render_design_agent_card(agent: dict, output_dir: Path) -> str:
         f'<div class="text-sm mt-3"><strong>{memory_label}:</strong> {html.escape(agent["mechanism_spec"]["memory_strategy"])}</div>'
         f'<div class="text-sm mt-2"><strong>Runtime:</strong> {html.escape(agent["mechanism_spec"]["runtime_loop"])}</div>'
         f'<div class="text-sm mt-2"><strong>{errors_label}:</strong> {html.escape(agent["mechanism_spec"]["error_handling"])}</div>'
+        "</div>"
+        "</div>"
+        '<div class="rounded-2xl border border-stone-200 p-4" data-block="governance">'
+        f'<div class="font-semibold mb-3">{"Governance"}</div>'
+        f'<div class="text-sm mb-3"><strong>{"Owner boundary"}:</strong> {html.escape(agent["governance"]["owner_boundary"])}</div>'
+        '<div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Route</th><th>Consumer</th><th>Contract</th><th>Risk</th></tr></thead>'
+        f"<tbody>{governance_rows}</tbody></table></div>"
+        f'<div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mt-4 text-sm">'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Owned surfaces"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["owned_surfaces"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Proof surfaces"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["proof_surfaces"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Deployment visibility"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["deployment_visibility"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Rollout"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["rollout"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Preparedness"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["preparedness"])}</ul></div>'
         "</div>"
         "</div>"
         '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts">'
@@ -603,7 +667,7 @@ def render_design_dashboard(agents: list[dict], summary: dict, output_dir: Path)
         "{{SUBTITLE}}": html.escape(summary["subtitle"]),
         "{{TAB_OVERVIEW}}": "Обзор" if language == "ru" else "Overview",
         "{{TAB_METHODOLOGY}}": "Методика" if language == "ru" else "Methodology",
-        "{{TAB_AGENTS}}": "Агенты" if language == "ru" else "Agents",
+        "{{TAB_AGENTS}}": "Units" if language == "ru" else "Units",
         "{{TAB_ISSUES}}": "Риски и delivery" if language == "ru" else "Risks and delivery",
         "{{OVERVIEW_SUMMARY_CARDS}}": render_overview_cards(summary),
         "{{ARCHITECTURE_HEADING}}": html.escape(summary["architecture"]["heading"]),
@@ -611,7 +675,7 @@ def render_design_dashboard(agents: list[dict], summary: dict, output_dir: Path)
         "{{MERMAID_ARCHITECTURE}}": summary["architecture"]["mermaid"],
         "{{SCORES_HEADING}}": "Готовность к внедрению" if language == "ru" else "Implementation readiness",
         "{{METHODOLOGY_HEADING}}": html.escape(methodology.get("heading", "Методология design package" if language == "ru" else "Design package methodology")),
-        "{{METHODOLOGY_LEAD}}": html.escape(methodology.get("lead", "Структурированный design package фиксирует инженерные решения до реализации." if language == "ru" else "The structured design package fixes engineering decisions before implementation.")),
+        "{{METHODOLOGY_LEAD}}": html.escape(methodology.get("lead", "Структурированный design package фиксирует boundary, governance и contracts до реализации." if language == "ru" else "The structured design package fixes boundary, governance, and contracts before implementation.")),
         "{{METHODOLOGY_LINKS}}": render_design_methodology_links(output_dir, language),
         "{{METHODOLOGY_SUMMARY_BLOCKS}}": render_design_methodology_blocks(summary),
         "{{AGENTS_LEAD}}": html.escape(summary["agents_lead"]),
@@ -626,9 +690,9 @@ def render_design_dashboard(agents: list[dict], summary: dict, output_dir: Path)
         "{{MATURITY_MATRIX_ROWS}}": matrix_rows,
         "{{CONTRACT_MATRIX_HEADING}}": "Матрица контрактов" if language == "ru" else "Contract matrix",
         "{{CONTRACT_MATRIX_TEXT}}": (
-            "Строки показывают агента, столбцы — ключевые интерфейсы design package."
+            "Строки показывают unit, столбцы — ключевые интерфейсы design package."
             if language == "ru"
-            else "Rows show the agent, columns show the main interfaces defined by the design package."
+            else "Rows show the unit, columns show the main interfaces defined by the design package."
         ),
         "{{CONTRACT_MATRIX_HEADER}}": contract_header,
         "{{CONTRACT_MATRIX_ROWS}}": contract_rows,

@@ -9,7 +9,7 @@ Use these cases for a structured with-skill vs without-skill comparison.
 
 **Prompt:** `Design an agent for processing product return requests`
 
-**Expected improvement:** With the skill, the design should be more structured than the baseline and include IDEF0, explicit contracts, and delivery planning.
+**Expected improvement:** With the skill, the design should be more structured than the baseline and include IDEF0, governance, explicit contracts, and delivery planning.
 
 **Assertions:**
 - [ ] The with-skill output contains an IDEF0 structure.
@@ -26,6 +26,17 @@ Use these cases for a structured with-skill vs without-skill comparison.
 - [ ] The with-skill output contains a stable audit structure.
 - [ ] The with-skill output cites file evidence.
 - [ ] The with-skill output includes actionable backlog items.
+
+### comparison-c
+
+**Prompt:** `Review the pack in evals/files/sample-pack`
+
+**Expected improvement:** With the skill, the review should inventory manifests, routes, proofs, and rollout signals instead of relying on prompt-only critique.
+
+**Assertions:**
+- [ ] The with-skill output inventories pack artifacts.
+- [ ] The with-skill output cites manifest or proof evidence.
+- [ ] The with-skill output includes governance findings.
 
 ## Results log
 

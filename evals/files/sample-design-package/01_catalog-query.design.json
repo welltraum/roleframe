@@ -1,8 +1,9 @@
 {
   "metadata": {
     "name": "catalog-query-designer",
+    "unit_kind": "agent",
     "language": "en",
-    "source_context": "Single-agent design brief for turning fuzzy user requests into structured catalog queries.",
+    "source_context": "Single-unit agent-profile design brief for turning fuzzy user requests into structured catalog queries.",
     "designed_at": "2026-04-08"
   },
   "summary": {
@@ -66,6 +67,37 @@
     "memory_strategy": "Keep only the current request, active ambiguity notes, and the latest validated schema slice.",
     "runtime_loop": "At most two lookup steps before producing the final contract. No recursive delegation.",
     "error_handling": "Timeouts convert to degraded output. Validation mismatches return business-empty with clarification suggestions."
+  },
+  "governance": {
+    "owner_boundary": "Owns normalization from fuzzy request to typed catalog query. Does not own downstream search execution or catalog mutation.",
+    "routes": [
+      {
+        "name": "catalog-search-handoff",
+        "consumer": "catalog-search-api",
+        "contract": "{ status, query, confidence, reasoning }",
+        "risk": "Parser drift in the downstream consumer."
+      }
+    ],
+    "owned_surfaces": [
+      "prompt policy for query normalization",
+      "typed query contract"
+    ],
+    "proof_surfaces": [
+      "scenario regression for supported and unsupported intents",
+      "timeout mock for degraded output"
+    ],
+    "deployment_visibility": [
+      "deployed internally behind the search UI",
+      "not visible as a standalone end-user surface"
+    ],
+    "rollout": [
+      "ship behind feature flag",
+      "expand only after degraded-path monitoring is stable"
+    ],
+    "preparedness": [
+      "typed contracts frozen with the UI consumer",
+      "schema-drift alerts connected to release gates"
+    ]
   },
   "contracts": {
     "consumer": "catalog-search-api",

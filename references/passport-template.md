@@ -1,131 +1,123 @@
-# Agent Passport Template
+# Unit passport template
 
-Use this template when generating agent passports in `design` mode.
+Use this template when generating design artifacts in `design` mode. The same frame works for `agent`, `pack`, and `workflow` profiles.
 
 ## Template
 
 ```markdown
-# Agent Passport: [Name]
+# Unit passport: [Name]
 
+**Profile:** [agent | pack | workflow]
 **Version:** [X.Y]
 **Date:** [YYYY-MM-DD]
-**Owner:** [role/person]
+**Owner:** [role / team / person]
 
-## Business function
+## Boundary statement
 
-[One sentence: concrete action verb + input + output + consumer. NOT "helps with".]
+[One sentence:
+- agent -> verb + input + output + consumer
+- pack -> ownership boundary + routes + owned surfaces
+- workflow -> orchestration contour + decomposition rule + consumer
+]
 
 ## Consumer
 
-[Who uses the agent's output: end user, another agent, API, system]
+[Who uses the output: user, another unit, API, system]
 
-## In-scope
+## In scope
 
-- [What the agent DOES -- specific, testable items]
-- [...]
+- [Specific responsibilities owned by this unit]
 
-## Out-of-scope
+## Out of scope
 
-- [What the agent does NOT do -- explicit exclusions]
-- [Responsibilities of neighboring agents]
-- [...]
+- [Explicit exclusions]
+- [Responsibilities of neighboring units]
 
-## IDEF0 Card
+## IDEF0 card
 
 | Component | Contents |
 |---|---|
-| **Input** | [What triggers the function: request types, files, events, dialog state] |
-| **Control** | [Rules: role, SOP, constraints, output contract. THIS IS THE SKILL/PROMPT] |
-| **Mechanism** | [Resources: tools, MCP servers, memory, LLM, runtime, middleware] |
-| **Output** | [Result format + non-happy path behavior] |
+| **Input** | [What triggers the unit: request, route, file, event, handoff] |
+| **Control** | [Role, SOP, constraints, contract, decision rules] |
+| **Mechanism** | [Tools, runtime, manifests, routes, memory, adapters, tests, proof surfaces] |
+| **Output** | [Success, empty, failure, partial, delegation, rollout signal] |
 
-## Output contract
+## Contracts
 
-### Happy path
-[Exact format: JSON schema, markdown structure, or enum of response variants]
-
-```json
-{
-  "status": "success",
-  "result": { ... },
-  "metadata": { "agent": "name", "confidence": 0.95 }
-}
-```
-
-### Business-empty (no data)
-[What the agent returns when there is no data to process. Must be a valid response, not an error.]
+### Input
 
 ```json
-{
-  "status": "empty",
-  "reason": "No matching records found for the given criteria",
-  "suggestions": ["Broaden search terms", "Check date range"]
-}
+{ "...": "..." }
 ```
 
-### Tool/MCP failure
-[What the agent does when a tool is unavailable, times out, or returns an error. Must not hallucinate or silently fail.]
+### Output
 
 ```json
-{
-  "status": "degraded",
-  "reason": "Database tool unavailable (timeout after 30s)",
-  "fallback_action": "Returning cached result from last successful query",
-  "requires_retry": true
-}
+{ "...": "..." }
 ```
 
-## Criticality
+### Failure
 
-[Low / Medium / High] -- [Justification: what breaks if this agent fails?]
-
-## Dependencies
-
-| Depends on | Type | Failure impact |
-|---|---|---|
-| [tool/agent/service name] | [tool/sub-agent/MCP/API] | [What happens if unavailable] |
-
-## Integration points
-
-| Direction | Partner | Contract |
-|---|---|---|
-| Receives from | [supervisor / API / user] | [Input format] |
-| Sends to | [consumer / next agent / UI] | [Output contract above] |
+```json
+{ "...": "..." }
 ```
 
-## Design decomposition template
+## Governance
 
-When multiple agents are needed, use this to document the split:
+### Owner boundary
+
+[What this unit owns and where that ownership stops]
+
+### Routes
+
+| Route | Consumer | Contract | Risk |
+|---|---|---|---|
+| [name] | [consumer] | [typed handoff or interface] | [main risk] |
+
+### Owned surfaces
+
+- [canonical surfaces owned by this unit]
+
+### Proof surfaces
+
+- [tests, contract checks, artifact checks, proofs]
+
+### Deployment and rollout
+
+- visibility: [visible / hidden / staged]
+- rollout: [waves, gates, rollback condition]
+- preparedness: [signals that make the unit safe enough to expose]
+```
+
+## Decomposition template
+
+When one unit is not enough:
 
 ```markdown
-# Agent System: [System Name]
+# Unit set: [System name]
 
-## Decomposition rationale
+## Why decomposition is required
 
-[Why one agent is not enough. What signals triggered the split.]
+[Why one unit would be too broad or would violate ownership rules]
 
-## Agent map
+## Unit map
 
 ```mermaid
 flowchart TB
-    SUP[Supervisor] --> A1[Agent 1]
-    SUP --> A2[Agent 2]
-    SUP --> A3[Agent 3]
-    A1 --> EXT1[External Service]
-    A2 --> EXT1
+    W["Workflow"] --> P["Pack"]
+    P --> A1["Agent 1"]
+    P --> A2["Agent 2"]
 ```
 
-## Routing contract
+## Route matrix
 
-| User intent pattern | Routes to | Confidence threshold |
-|---|---|---|
-| [Pattern description] | [Agent name] | [When to escalate vs route] |
+| Source | Target | Typed contract | Owner |
+|---|---|---|---|
+| [unit] | [unit] | [schema / template] | [owning unit] |
 
 ## Boundary matrix
 
-| Responsibility | Agent 1 | Agent 2 | Agent 3 |
+| Responsibility | Unit A | Unit B | Unit C |
 |---|---|---|---|
-| [Function A] | Owner | - | - |
-| [Function B] | - | Owner | Consulted |
-| [Function C] | - | - | Owner |
+| [ownership slice] | Owner | Consulted | - |
 ```

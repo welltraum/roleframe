@@ -1,0 +1,6 @@
+{
+  "name": "donor-route",
+  "consumer": "mixed-pack",
+  "payload": "Forward the user text directly.",
+  "visibility": "visible"
+}

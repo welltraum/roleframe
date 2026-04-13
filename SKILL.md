@@ -1,192 +1,261 @@
 ---
 name: roleframe
 description: >
-  Design and review AI agent systems using IDEF0 functional methodology.
-  Use when user wants to: develop a new agent or multi-agent system as an engineering package (design),
-  audit existing project agents against 10 maturity criteria with discovery-first workflow (review).
-  Dashboard HTML is generated automatically as an artifact of design and review.
-  Triggers: "design agent", "audit agents", "roleframe", "agent review", "agent maturity",
-  "спроектируй агента", "аудит агентов", "разработай агента".
+  Design and review AI agent systems through IDEF0 functional methodology.
+  Use when the user wants an engineering package for a governance unit: an agent profile,
+  a pack profile, or a workflow profile. Design mode creates JSON-first design artifacts.
+  Review mode discovers runtime, manifest, route, proof, test, and prompt artifacts and audits
+  them against 10 maturity criteria with evidence-first scoring. Dashboard HTML is always derived.
+  Triggers: "design agent", "design pack", "audit agents", "audit pack", "roleframe",
+  "agent review", "pack review", "workflow audit", "спроектируй агента",
+  "спроектируй pack", "аудит агентов", "аудит pack", "аудит workflow".
 license: Apache-2.0
 metadata:
   author: welltraum
-  version: "0.3.0"
+  version: "0.4.1"
 ---
 
 # RoleFrame
 
-You are an expert in designing agent systems using IDEF0 structural functional analysis. You work with **business functions, roles, and processes** — not with specific programming languages or frameworks.
+You design and review AI systems through IDEF0 structural functional analysis. The canonical object is a **governance unit** with one of three profiles:
 
-## Language rule (apply before everything else)
+- `agent`, one business function with a clear input and output contract
+- `pack`, one ownership boundary with explicit routes, owned surfaces, and proof surfaces
+- `workflow`, one orchestration contour that must be decomposed before audit if it mixes multiple responsibilities
 
-Detect the language of the user's request. Use that language in **all output** — audit files, dashboard HTML, agent passports, backlog items, IDEF0 cards, tooltips, button labels, everything. No mixed-language output. If the request is in Russian, every word in every generated artifact is in Russian.
+You work with business boundaries, ownership, contracts, and operating signals, not with generic "smart assistant" prose.
 
-## Writing rules (from humanizer)
+By default, this repository defines the **global core**: methodology, schemas, validators, renderers, and review/design modes. A project may add a **project-local profile** that maps the core onto local owner surfaces, status vocabulary, proof surfaces, write policy, and diagnostics placement.
 
-Apply these to all generated text — markdown, HTML, any artifact:
+## Language rule
 
-- **Sentence case** for headings, not Title Case. "Анализ агентов", not "Анализ Агентов".
-- **No em-dash overuse.** Replace `—` with a comma, period, or new sentence.
-- **No decorative emojis** unless the user explicitly asks for them.
-- **No AI filler.** Cut: "важно отметить", "следует подчеркнуть", "рассмотрим", "в рамках данного", "ключевую роль", "является неотъемлемой частью", "давайте рассмотрим".
-- **No promotional language.** Cut: "мощный", "инновационный", "передовой", "уникальный".
-- **No vague positive conclusions.** Replace "будущее выглядит многообещающим" with a specific next step.
-- **Have opinions.** React to what is found, not just report.
-- **Vary sentence length.** Mix short and long. Short punchy sentences for findings. Longer for context.
-- **Name the problem precisely.** Prefer concrete engineering language.
-- **Active voice.**
+Detect the request language first. Keep **all generated artifacts** in that language: JSON summaries, markdown views, dashboard labels, backlog items, contract snippets, and helper explanations.
+
+## Writing rules
+
+Apply these to every generated artifact:
+
+- Sentence case for headings.
+- No decorative filler and no promotional wording.
+- Prefer direct engineering language to abstract summaries.
+- Use active voice.
+- Name the defect or decision precisely.
+- Keep markdown and dashboard text dense; the renderer handles formatting.
 
 ## Core principle
 
-An agent is a **designed software function** with explicit boundaries — not a "smart chat". The minimal unit of design is a **single business function**. If the brief says "agent that does everything", that is a signal to decompose.
+RoleFrame keeps the same IDEF0 core:
 
-## Reference map (load on demand)
+```
+         Control
+    (role, SOP, constraints,
+     output contract = prompt / policy)
+            |
+            v
+Input ---> [UNIT] ---> Output
+            ^
+            |
+        Mechanism
+    (tools, runtime, memory, adapters)
+```
 
-Load only what is needed for the current mode:
+**Critical:** prompt and policy artifacts are always `Control`. Tools, routes, runtime helpers, manifests, tests, and proof surfaces are `Mechanism`, `Evaluation`, or `Operations`.
+
+The design rule depends on the profile:
+
+- `agent`: one business function
+- `pack`: one ownership boundary
+- `workflow`: decompose first, audit second
+
+## Reference map
+
+Load only what is needed:
 
 - Design: [references/methodology.md](references/methodology.md), [references/checklist.md](references/checklist.md), [references/passport-template.md](references/passport-template.md), [references/structured-design.md](references/structured-design.md)
 - Review: [references/prompt-archaeology.md](references/prompt-archaeology.md), [references/anti-patterns.md](references/anti-patterns.md), [references/structured-audit.md](references/structured-audit.md), [references/audit-template.md](references/audit-template.md)
 - Renderer: [references/dashboard-playbook.md](references/dashboard-playbook.md), [assets/dashboard-template.html](assets/dashboard-template.html)
 
-### IDEF0 model (always apply)
-
-```
-         Control
-    (role, SOP, constraints,
-     output contract = SKILL)
-            |
-            v
-Input ---> [FUNCTION] ---> Output
-            ^
-            |
-        Mechanism
-    (tools, memory, runtime, LLM)
-```
-
-**Critical: Skill/system prompt IS the Control component in IDEF0.** Always separate what is Control (rules, prompts) from what is Mechanism (code, tools).
-
 ## Argument router
 
 User invoked: `/roleframe $ARGUMENTS`
 
-Parse the first word to select mode:
+The first word selects the mode:
 
 | Mode | Purpose | Extra args |
 |---|---|---|
-| `design` | Develop a new agent or multi-agent system as an implementation-ready package | Description of business task |
-| `review` | Discover project agent artifacts and audit them against 10 maturity criteria | Path to project subtree, agent file, or repository root |
+| `design` | Build an implementation-ready package for a governance unit or unit set | Optional profile `agent|pack|workflow`, then description |
+| `review` | Discover project artifacts and audit governance units against the maturity model | Optional profile `agent|pack|workflow`, then path |
 
-If arguments are empty or unrecognized, show help in the detected language with these two modes only.
+Argument rules:
 
-If the first word is `dashboard`, treat it as a deprecated alias, do not advertise it as a normal mode, and explain:
-- dashboard is now generated automatically by `design` and `review`
-- if a structured package already exists, rebuild it with `uv run scripts/render_roleframe_package.py --kind review --input <path> --output <path>` or `--kind design`
+- `/roleframe design agent <description>` forces the `agent` profile
+- `/roleframe review pack <path>` forces the `pack` profile
+- If the profile is omitted, autodetect from the brief or discovered artifacts
+- If autodetect stays ambiguous after discovery, ask one short clarifying question
 
----
+If arguments are empty or unrecognized, show help in the detected language with only `design` and `review`.
+
+If the first word is `dashboard`, treat it as a deprecated alias and explain:
+
+- dashboard is generated automatically by `design` and `review`
+- rebuild an existing package with `uv run scripts/render_roleframe_package.py --kind review --input <dir> --output <dir>` or `--kind design`
 
 ## Mode: design
 
-Develop an implementation-ready agent package, not a generic brainstorm.
+Develop a JSON-first engineering package, not a brainstorm.
 
-### Step 1: Fix the business function
-Ask and lock:
-- What specific business result must the agent return?
-- Who consumes the output?
-- What are the success criteria?
-- What are the inputs and integration boundaries?
-- What is explicitly out of scope?
+### Step 1: Fix the profile and boundary
+
+Lock:
+
+- the profile: `agent`, `pack`, or `workflow`
+- the concrete result the unit must return
+- the consumer of that result
+- success criteria
+- explicit out-of-scope boundaries
+
+Profile rules:
+
+- `agent`: reject briefs that bundle multiple business functions
+- `pack`: reject designs that spread ownership across parallel owner surfaces
+- `workflow`: decompose broad contours into child units before writing the package
 
 ### Step 2: Define integration context
-- Existing systems, agents, APIs, or handoff points
-- Required contracts and critical dependencies
-- Safety, compliance, latency, or runtime constraints
 
-### Step 3: Decompose the solution
+Collect:
+
+- adjacent systems, units, APIs, adapters, and handoff points
+- existing manifests, routes, tests, rollout helpers, and proof surfaces
+- project-local profile mappings if the repository defines them
+- safety, compliance, latency, and runtime constraints
+
+### Step 3: Decompose if needed
+
 If the brief is too broad:
-- Split it into atomic business functions
-- Add a supervisor only if routing is really needed
-- Show the decomposition tree and routing rationale
 
-### Step 4: Design each agent through IDEF0
-For each agent fill the four quadrants from [references/methodology.md](references/methodology.md).
+- split it into multiple units
+- add a routing unit only if routing is genuinely needed
+- for `workflow`, produce the decomposition tree first
 
-Explicitly separate:
-- **Control**: role, SOP, constraints, output contract
-- **Mechanism**: tools, memory, runtime, middleware
+### Step 4: Fill IDEF0 for each unit
 
-### Step 5: Design the execution package
-For each agent specify:
-- typed input/output/failure contracts
-- runtime loop and error handling
-- tools and dependency model
+For every unit, write:
+
+- `Input`
+- `Control`
+- `Mechanism`
+- `Output`
+
+Separate policy from execution. Prompt text is never the whole contract on its own.
+
+### Step 5: Write the design package
+
+For each unit specify:
+
+- `metadata.unit_kind`
+- boundary statement, consumer, in-scope, out-of-scope
+- typed input, output, and failure contracts
+- `control_spec` with role, SOP, constraints
+- `mechanism_spec` with tools, memory, runtime loop, error handling
+- `governance` with `owner_boundary`, `routes`, `owned_surfaces`, `proof_surfaces`, `deployment_visibility`, `rollout`, `preparedness`
+- dependencies
 - evaluation plan
-- observability and change-management plan
+- delivery plan
 
-### Step 6: Validate against the checklist
-Load [references/checklist.md](references/checklist.md). Mark each item pass/fail before packaging.
+### Step 6: Validate with the checklist
 
-### Step 7: Generate artifacts and render them
-Write the structured design package:
-- `docs/agent_design/NN_name.design.json`
-- `docs/agent_design/summary.design.json`
+Load [references/checklist.md](references/checklist.md) and make the profile-aware checks explicit before packaging.
 
-Then render the views:
-- `uv run scripts/render_roleframe_package.py --kind design --input docs/agent_design --output docs/agent_design`
+### Step 7: Generate canonical and derived artifacts
 
-The renderer must generate:
-- `docs/agent_design/NN_name.md`
-- `docs/agent_design/README.md`
-- `docs/agent_design/dashboard.html`
+Canonical design files:
 
-Before claiming success, verify that the JSON package, markdown views, and dashboard all exist.
+- `docs/roleframe/design/NN_name.design.json`
+- `docs/roleframe/design/summary.design.json`
 
----
+Derived views:
+
+- `docs/roleframe/design/NN_name.md`
+- `docs/roleframe/design/README.md`
+- `docs/roleframe/design/dashboard.html`
+
+Render with:
+
+- `uv run scripts/render_roleframe_package.py --kind design --input docs/roleframe/design --output docs/roleframe/design`
+
+Do not generate new canonical files under `docs/agent_design`. That layout is legacy compatibility only.
+
+If a project-local profile remaps outputs into a diagnostics surface, keep the same schema and renderer contract. Only accepted structural facts should be promoted back into repo truth.
 
 ## Mode: review
 
-Audit existing agents against 10 maturity criteria (max 30 points).
+Audit existing governance units against the 10 maturity criteria.
 
-### Step 1: Discover agent artifacts in the project
-- If path given and it is a directory, start discovery from that subtree
-- If path given and it is a file, review that file deeply and also pull related prompt, include, tool, runtime, and sub-agent artifacts
-- If no path is given, start discovery from the project root
-- Search not only `agents/*.md`, but all likely agent signals:
-  - markdown or text prompts with YAML frontmatter
-  - `You are...` or role-defining prompts
-  - `sub_agents`
-  - toolkit/runtime configs
-  - tool factory or orchestration code
-  - prompt includes like `{{placeholder}}`
-- Build a short artifact inventory before scoring
+### Step 1: Discover artifacts
 
-### Step 2: Prompt archaeology (for agents without explicit structure)
-Before scoring, apply [references/prompt-archaeology.md](references/prompt-archaeology.md) to reconstruct the implicit IDEF0:
-1. Find the implicit role (first lines, "You are..." patterns)
-2. Reconstruct the implicit SOP from imperative sequences
-3. Extract constraints from "do not / never / only" statements
-4. Infer the output contract from examples and "respond with" phrases
-5. Map the mechanism from frontmatter tools vs body references
-6. Write the one-sentence function test: if you cannot write it, decomposition is the primary finding
-7. Estimate context window budget: `char_count / 3.5 ≈ tokens`. Flag if static prompt > 2000 tokens.
+If a path is given:
 
-### Step 3: Anti-pattern scan
-Load [references/anti-patterns.md](references/anti-patterns.md) and scan each agent systematically. For every pattern that fires: name it (AP-N), quote the evidence with file:line, state the risk. Add to backlog.
+- directory: discover from that subtree
+- file: review that file deeply and also pull related prompts, manifests, routes, tests, rollout helpers, proof surfaces, tool/runtime artifacts
 
-### Step 4: Audit each agent into structured JSON
+If no path is given, discover from the project root.
 
-**CRITICAL: Audit is based on CODE, not documentation.** For every claim:
-- Read the actual source files (prompts, Python runtime, tool factory, tests)
-- Cross-check tool availability: YAML frontmatter `tools.toolkits` → tool factory → what's actually importable
-- If prompt references a tool that doesn't exist in the toolkit — that's a finding (AP-14)
-- If eval framework exists but has no agent-specific scenarios — say "framework exists, scenarios missing" (not "eval absent")
-- Every maturity score must cite `file:line`; score without evidence = 0
+Search more than `agents/*.md`. Treat these as first-class signals:
 
-Build a canonical `NN_name.audit.json` using [references/structured-audit.md](references/structured-audit.md).
+- prompts and skill/policy markdown
+- manifests such as `pack.json`, `manifest.json`, `*.yaml`, `*.toml`
+- route adapters and route contracts
+- runtime/orchestration code
+- rollout helpers
+- tests and eval datasets
+- proof surfaces and artifact checks
+- project-local profile files that map core vocabulary to local surfaces
+- ownership markers and visibility configuration
 
-The LLM must fill the semantic fields only:
-- `metadata`
+Build a short artifact inventory before scoring.
+
+### Step 2: Select the review profile
+
+Profile-specific review flow:
+
+- `agent`: prompt archaeology plus runtime cross-check
+- `pack`: artifact archaeology across manifest, adapter route, rollout helpers, tests, proof surfaces, and prompt/policy
+- `workflow`: decomposition-first review, then cross-unit contract matrix
+
+Prompt archaeology is a **special case** for `agent`, not the default for every review.
+
+### Step 3: Enforce evidence precedence
+
+Trust order:
+
+1. runtime, manifests, adapters, tests, proof surfaces
+2. prompts and policy files
+3. prose docs
+
+If prose disagrees with executable or proof artifacts, trust the executable layer.
+
+### Step 4: Scan anti-patterns
+
+Load [references/anti-patterns.md](references/anti-patterns.md) and check both classic agent issues and pack-governance issues:
+
+- hidden or undeclared routes
+- explicit-only violations
+- proof-surface gaps
+- `deployed != visible`
+- `visible != owned`
+- dashboard treated as source-of-truth
+
+### Step 5: Build structured review JSON
+
+Every claim must cite evidence. Score without evidence = 0.
+
+For each reviewed unit, fill:
+
+- `metadata` including `unit_kind`
 - `summary`
+- `artifact_inventory`
 - `idef0`
+- `governance`
 - `criteria`
 - `evidence_points`
 - `contracts`
@@ -194,83 +263,62 @@ The LLM must fill the semantic fields only:
 - `backlog`
 - `patch_plan`
 
-Use [references/audit-template.md](references/audit-template.md) as the target markdown layout that will be rendered from this JSON, not as an invitation to hand-write a long markdown file first.
+Required review specifics:
 
-Score each of the 10 criteria using the rubric in [references/methodology.md](references/methodology.md).
+- `artifact_inventory` must list artifacts of type `prompt|manifest|route|runtime|test|proof_surface|doc`
+- `governance` must include `owner_boundary`, `route_matrix`, `proof_surfaces`, `deployment_visibility`, `rollout`, `preparedness`
+- `business_boundary` criterion is profile-aware:
+  - `agent`: atomic business function
+  - `pack`: ownership boundary
+  - `workflow`: decomposition and orchestration boundary
 
-**Evidence format — every finding must contain:**
-1. Layer label: `Control / Mechanism / Eval / Operations`
-2. Source: `file#Lxx-Lyy`
-3. One of: direct quote, structural indicator, or explicit "artifact absent" with search log
+### Step 6: Run cross-unit analysis
 
-**Patch plan format — each item must include:**
-- Target file and line
-- Layer: Control / Mechanism / Eval / Operations
-- Patch type: prompt / skill / schema / runtime / eval
-- Regression risk: **Safe** / **Breaking** / **Behavioural**
-- Ready-to-paste draft for top 3 deficits
-- Verification steps: what to test after the change
+If more than one unit is reviewed, check:
 
-Example:
-```
-Изменение #1: ввести output contract
-Слой: Control + Mechanism
-Точка: agents/1c/supervisor.md:45
-Тип: prompt + runtime
-Приоритет: P1 | Риск: Breaking
+- overlap in ownership
+- typed or implicit routing
+- hidden dependencies
+- route matrix completeness
+- conflicts between owned surfaces and visible surfaces
 
-Черновик:
-{
-  "status": "success" | "empty" | "error",
-  "result": string | null,
-  "agent_used": string | null,
-  "reason": string
-}
+### Step 7: Generate canonical and derived artifacts
 
-Проверка:
-- 3 happy-path кейса с каждым подагентом
-- 2 кейса с tool failure
-- 1 кейс с пустым бизнес-результатом
-```
+Canonical review files:
 
-### Step 5: Cross-agent analysis (if agents > 1)
-- Responsibility overlaps
-- Routing contract: formalized or implicit?
-- Dead links (declared but unused sub_agents) — AP-13
-- Hidden dependencies (used but undeclared) — AP-14
-- Cross-agent contract matrix: for each agent-to-agent connection, is the handoff payload typed?
+- `docs/roleframe/review/NN_name.audit.json`
+- `docs/roleframe/review/summary.audit.json`
 
-### Step 6: Generate output files through the renderer
-- Write per-agent structured audits: `docs/agent_audit/NN_name.audit.json`
-- Write package summary: `docs/agent_audit/summary.audit.json`
-- Number files `01_`, `02_` by hierarchy, supervisor first
-- Run `uv run scripts/render_roleframe_package.py --kind review --input docs/agent_audit --output docs/agent_audit`
-- The renderer must generate:
-  - `docs/agent_audit/NN_name.md`
-  - `docs/agent_audit/README.md`
-  - `docs/agent_audit/dashboard.html`
-- Before claiming success, verify that the JSON package, markdown views, and dashboard all exist
+Derived views:
 
----
+- `docs/roleframe/review/NN_name.md`
+- `docs/roleframe/review/README.md`
+- `docs/roleframe/review/dashboard.html`
 
-## Agent definition format (this project)
+Render with:
 
-Agent files are markdown with YAML frontmatter in `agents/`:
+- `uv run scripts/render_roleframe_package.py --kind review --input docs/roleframe/review --output docs/roleframe/review`
 
-```yaml
----
-name: agent-name
-description: what it does
-temperature: 0.1
-tools:
-  toolkits:
-    - toolkit-name
-sub_agents:
-  - sub-agent-name
-middleware:
-  - type: middleware-type
----
-[prompt content with {{placeholder}} includes]
-```
+Do not generate new canonical files under `docs/agent_audit`. That layout is legacy compatibility only.
 
-Placeholders `{{name}}` load from `prompts/agents/name.txt`. Read them too when building agent cards.
+If a project-local profile wants diagnostics under a repo-local surface such as `output/diagnostics/<date>_packframe/`, treat that as a placement adapter. The review output still stays derived and does not become new truth on its own.
+
+## Output rules
+
+- `dashboard.html` is always derived, never canonical truth
+- markdown and HTML must match the structured JSON package
+- the renderer owns formatting; the LLM owns semantics and evidence-backed judgments
+
+## Discovery notes for this repository
+
+Legacy sample agent fixtures still live under `evals/files/sample-agents/` for compatibility testing.
+
+Pack-aware fixtures may include:
+
+- `pack.json` or `manifest.json`
+- route descriptors under `routes/`
+- proof artifacts under `proofs/`
+- rollout helpers under `rollout/`
+- tests or contract checks under `tests/`
+
+When placeholders like `{{name}}` appear in markdown prompts, resolve them from `prompts/agents/name.txt` or the nearest matching prompt directory before scoring.

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unit design dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --panel: rgba(255,252,247,.94);
+      --line: #e8ddcf;
+      --ink: #1f2937;
+      --muted: #667085;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --warn: #b54708;
+      --good: #027a48;
+    }
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: radial-gradient(circle at top right, #efe7d8 0%, #f7f4ee 38%, #f3efe6 100%);
+      color: var(--ink);
+    }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(77, 57, 34, 0.06);
+    }
+    .tab-active { background: #0f766e; color: #fff; }
+    .tab-inactive { background: #ece4d8; color: #475467; }
+    .tab-inactive:hover { background: #e2d7c8; }
+    .badge-danger { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+    .badge-warn { background: #fffaeb; color: var(--warn); border: 1px solid #fedf89; }
+    .badge-good { background: #ecfdf3; color: var(--good); border: 1px solid #abefc6; }
+    .chip { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+    .chip-danger { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+    .chip-warn { background: #fffaeb; color: var(--warn); border: 1px solid #fedf89; }
+    .chip-good { background: #ecfdf3; color: var(--good); border: 1px solid #abefc6; }
+    .chip-neutral { background: #f2f4f7; color: #475467; border: 1px solid #d0d5dd; }
+    .score-bar { transition: width .45s ease; }
+    .mermaid { background: transparent !important; }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    .data-table td, .data-table th {
+      padding: 8px 10px;
+      border-bottom: 1px solid #ebe3d7;
+      vertical-align: top;
+    }
+    .data-table th {
+      color: #475467;
+      font-size: 12px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .data-table td {
+      font-size: 13px;
+    }
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef7f6;
+      color: #115e59;
+      border: 1px solid #cfe9e6;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .section-lead {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 74ch;
+    }
+    .subpanel {
+      border: 1px solid #ebe3d7;
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .code-frame {
+      border-radius: 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    [data-unit-card] {
+      scroll-margin-top: 96px;
+    }
+    [data-block="criteria"] th,
+    [data-block="backlog"] th {
+      white-space: nowrap;
+    }
+    [data-block="patch-plan-item"] pre {
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-50 border-b border-[var(--line)] backdrop-blur bg-[rgba(247,244,238,0.9)]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Unit design dashboard</h1>
+        <p class="text-sm text-slate-500">Rendered from the structured design package</p>
+      </div>
+      <nav class="flex gap-2 flex-wrap">
+        <button id="btn-overview" onclick="showView('overview')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-active">Overview</button>
+        <button id="btn-methodology" onclick="showView('methodology')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Methodology</button>
+        <button id="btn-agents" onclick="showView('agents')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Units</button>
+        <button id="btn-issues" onclick="showView('issues')" class="px-3 py-2 rounded-xl text-sm font-semibold tab-inactive">Risks and delivery</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section id="view-overview" class="view space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Profile mix</div><div class="text-3xl font-extrabold">Agent profile</div><div class="text-sm text-slate-500 mt-2">The boundary is narrow enough to stay a single unit without premature decomposition.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Readiness</div><div class="text-3xl font-extrabold">74/100</div><div class="text-sm text-slate-500 mt-2">Contracts and runtime are mostly defined, while ops and eval still need implementation.</div></div>
+<div class="panel rounded-3xl p-5"><div class="text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">Critical risk</div><div class="text-3xl font-extrabold">Thin observability</div><div class="text-sm text-slate-500 mt-2">The design can ship only after degraded-path and schema-drift signals are instrumented.</div></div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-2">Solution map</h2>
+        <p class="text-sm text-slate-500 mb-4">The unit normalizes requests into typed catalog queries and hands the payload to the search API.</p>
+        <div class="mermaid">flowchart LR
+    U["User request"] --> A["Catalog query planner"] --> S["Catalog search API"]</div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-5">Implementation readiness</h2>
+        <div class="space-y-5">
+          <div><div class="flex justify-between text-sm mb-1"><span class="font-semibold">catalog-query-designer</span><span>74/100, Implementation-ready draft</span></div><div class="w-full h-3 bg-stone-200 rounded-full overflow-hidden"><div class="h-3 bg-amber-500 score-bar" style="width:74%"></div></div><div class="text-xs text-slate-500 mt-1">Observability and regression coverage are still thinner than the control and contract design.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-methodology" class="view hidden space-y-6">
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-2">Design package methodology</h2>
+        <p class="text-sm text-slate-500 mb-5">The structured design package fixes boundary, governance, and contracts before implementation.</p>
+        <div class="flex flex-wrap gap-3 mb-5">
+          <a class="link-pill" href="README.md">Open design summary</a>
+<a class="link-pill" href="../../../references/structured-design.md">Open design schema</a>
+<a class="link-pill" href="../../../references/methodology.md">Open methodology</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><div class="font-semibold mb-2">What is fixed</div><ul class="list-disc pl-5 space-y-1"><li>boundary, consumer, and profile</li><li>control vs mechanism split</li><li>typed contracts and governance</li></ul></div>
+<div class="rounded-2xl border border-stone-200 bg-stone-50 p-4"><div class="font-semibold mb-2">What still needs implementation</div><ul class="list-disc pl-5 space-y-1"><li>runtime orchestration and route adapters</li><li>eval scenarios, proof surfaces, and regression loop</li><li>observability, rollout checks, and preparedness</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-agents" class="view hidden space-y-5">
+      <div class="panel rounded-3xl p-5" data-block="agents-lead"><p class="text-sm text-slate-600">The cards below should be enough to start implementation without going back to a prose-only design document. Each card carries boundary, governance, contracts, and rollout context.</p></div>
+<article class="panel rounded-3xl p-6 space-y-5" data-unit-card="catalog-query-designer"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">catalog-query-designer</h2><p class="text-sm text-slate-500">Observability and regression coverage are still thinner than the control and contract design.</p></div><div class="flex items-center gap-2"><span class="badge-warn rounded-full px-3 py-1 text-sm font-bold">74/100</span><span class="chip chip-neutral">Implementation-ready draft</span><span class="chip chip-neutral">profile: agent</span></div></div><div class="flex flex-wrap gap-2" data-block="sources"><a class="link-pill" href="01_catalog-query-designer.md">Full design</a></div><div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict"><div class="font-semibold mb-2">Short verdict</div><p class="text-sm">The design has a clear business boundary and typed contracts. The main remaining risk is incomplete instrumentation for retrieval quality and fallback quality.</p></div><div class="rounded-2xl border border-stone-200 p-4" data-block="boundary"><div class="font-semibold mb-3">Boundary</div><div class="text-sm"><strong>Goal:</strong> Transform a fuzzy user request into a validated structured query for the product catalog API.</div><div class="text-sm mt-2"><strong>Consumer:</strong> Catalog backend and search UI.</div><ul class="list-disc pl-5 mt-3 space-y-1 text-sm"><li>Returns a typed query object for supported intents.</li><li>Explains business-empty outcomes without inventing unavailable filters.</li><li>Produces a degraded contract when retrieval tools are unavailable.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="idef0"><div class="font-semibold mb-3">IDEF0</div><div class="space-y-2 text-sm"><div><strong>Input:</strong> User request text, locale, and optional dialog context enter the function. Unsupported intents are rejected before query assembly.</div><div><strong>Control:</strong> The prompt fixes the role, normalization SOP, unsupported-intent policy, and the output contract for success, empty, and degraded paths.</div><div><strong>Mechanism:</strong> The agent uses a catalog schema reference, validation rules, and retrieval tools. Runtime limits bound the number of tool calls and retries.</div><div><strong>Output:</strong> The function returns a typed structured query, a business-empty result, or a degraded response with retry guidance.</div></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="rounded-2xl border border-stone-200 p-4" data-block="control"><div class="font-semibold mb-3">Control</div><div class="text-sm mb-2"><strong>Role:</strong> Catalog query planner for product search.</div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">SOP</div><ul class="list-disc pl-5 space-y-1 text-sm"><li>Classify the request into a supported catalog intent.</li><li>Extract candidate entities, filters, and ambiguities.</li><li>Validate the filter set against the catalog schema.</li><li>Return the strict output contract with confidence and rationale.</li></ul><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mt-4 mb-2">Constraints</div><ul class="list-disc pl-5 space-y-1 text-sm"><li>Do not invent unsupported filters or product facts.</li><li>Do not return free-form prose as the primary payload.</li><li>If the schema or tools are unavailable, return the degraded contract.</li></ul></div><div class="rounded-2xl border border-stone-200 p-4" data-block="mechanism"><div class="font-semibold mb-3">Mechanism</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Tool</th><th>Purpose</th><th>Failure mode</th></tr></thead><tbody><tr><td>catalog_schema_lookup</td><td>Resolve supported filter names and allowed values.</td><td>Return degraded output and request retry.</td></tr>
+<tr><td>catalog_examples_store</td><td>Ground normalization on known query examples.</td><td>Continue without examples and lower confidence.</td></tr></tbody></table></div><div class="text-sm mt-3"><strong>Memory:</strong> Keep only the current request, active ambiguity notes, and the latest validated schema slice.</div><div class="text-sm mt-2"><strong>Runtime:</strong> At most two lookup steps before producing the final contract. No recursive delegation.</div><div class="text-sm mt-2"><strong>Errors:</strong> Timeouts convert to degraded output. Validation mismatches return business-empty with clarification suggestions.</div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="governance"><div class="font-semibold mb-3">Governance</div><div class="text-sm mb-3"><strong>Owner boundary:</strong> Owns normalization from fuzzy request to typed catalog query. Does not own downstream search execution or catalog mutation.</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Route</th><th>Consumer</th><th>Contract</th><th>Risk</th></tr></thead><tbody><tr><td><span class="mono">catalog-search-handoff</span></td><td><span class="mono">catalog-search-api</span></td><td>{ status, query, confidence, reasoning }</td><td>Parser drift in the downstream consumer.</td></tr></tbody></table></div><div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mt-4 text-sm"><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Owned surfaces</div><ul class="list-disc pl-5 space-y-1"><li>prompt policy for query normalization</li><li>typed query contract</li></ul></div><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Proof surfaces</div><ul class="list-disc pl-5 space-y-1"><li>scenario regression for supported and unsupported intents</li><li>timeout mock for degraded output</li></ul></div><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Deployment visibility</div><ul class="list-disc pl-5 space-y-1"><li>deployed internally behind the search UI</li><li>not visible as a standalone end-user surface</li></ul></div><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Rollout</div><ul class="list-disc pl-5 space-y-1"><li>ship behind feature flag</li><li>expand only after degraded-path monitoring is stable</li></ul></div><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Preparedness</div><ul class="list-disc pl-5 space-y-1"><li>typed contracts frozen with the UI consumer</li><li>schema-drift alerts connected to release gates</li></ul></div></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-block="contracts"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Input contract</div><div class="text-xs text-slate-500 mb-2">Consumer: <span class="mono">catalog-search-api</span></div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{ request_text: string, locale: string, session_filters?: object }</pre></div><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-2">Output and failure contract</div><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{ status: &quot;success&quot;, query: object, confidence: number, reasoning: string[] } | { status: &quot;empty&quot;, reason: string, suggestions: string[] }</pre><pre class="mono text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap mt-3">{ status: &quot;degraded&quot;, reason: string, retryable: boolean, fallback_action: string }</pre></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="dependencies"><div class="font-semibold mb-3">Dependencies</div><div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr><th>Name</th><th>Type</th><th>Reason</th><th>Risk</th></tr></thead><tbody><tr><td>catalog schema service</td><td>API</td><td>Supplies the allowed filter vocabulary.</td><td>Schema drift breaks generated queries.</td></tr>
+<tr><td>search UI</td><td>consumer</td><td>Consumes the typed payload and explanation metadata.</td><td>UI parser mismatch breaks the success path.</td></tr></tbody></table></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="evaluation"><div class="font-semibold mb-3">Evaluation plan</div><div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm"><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Scenarios</div><ul class="list-disc pl-5 space-y-1"><li>Happy path for brand + category + price filter queries.</li><li>Unsupported intent that should be rejected cleanly.</li><li>Tool timeout that must produce degraded output.</li></ul></div><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Metrics</div><ul class="list-disc pl-5 space-y-1"><li>Structured query validity rate.</li><li>Unsupported-intent false positive rate.</li><li>Degraded response honesty rate.</li></ul></div><div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">Regression</div><ul class="list-disc pl-5 space-y-1"><li>Run a fixed scenario pack on every prompt or schema change.</li><li>Replay timeout and empty-result mocks before release.</li></ul></div></div></div><div class="rounded-2xl border border-stone-200 p-4" data-block="delivery"><div class="font-semibold mb-3">Delivery plan</div><div class="grid grid-cols-1 xl:grid-cols-3 gap-4"><div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-1">Phase 1. Contracts</div><p class="text-sm text-slate-600">Freeze input/output/failure contracts with the UI and API consumers.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-1">Phase 2. Runtime</div><p class="text-sm text-slate-600">Implement schema lookup, validation, and bounded retry logic.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold mb-1">Phase 3. Eval and ops</div><p class="text-sm text-slate-600">Add scenario regression, tracing, and degraded-path dashboards.</p></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4"><div class="subpanel"><div class="font-semibold mb-2">Observability</div><ul class="list-disc pl-5 space-y-1 text-sm"><li>Log request class, selected filters, and contract path.</li><li>Track schema lookup latency and timeout rate.</li></ul></div><div class="subpanel"><div class="font-semibold mb-2">Change management</div><ul class="list-disc pl-5 space-y-1 text-sm"><li>Version prompt and contract changes together.</li><li>Require regression rerun before deployment.</li></ul></div></div></div></article>
+    </section>
+
+    <section id="view-issues" class="view hidden space-y-6">
+      <div class="panel rounded-3xl p-6 border-l-4 border-rose-500">
+        <h2 class="text-lg font-bold text-rose-900 mb-4">Critical risks</h2>
+        <div class="space-y-3 text-sm">
+          <p><strong>1.</strong> Schema drift can invalidate the generated query contract.</p>
+<p><strong>2.</strong> Timeout handling is designed but not yet instrumented in production.</p>
+<p><strong>3.</strong> Regression coverage must include unsupported-intent and degraded-path cases.</p>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-4">Implementation matrix</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm data-table">
+            <thead>
+              <tr class="border-b border-stone-200 text-left">
+                <th>Unit</th><th>Boundary</th><th>Control</th><th>Mechanism</th><th>Eval</th><th>Delivery</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono">catalog-query-designer</span></td><td>fixed</td><td>defined</td><td>defined</td><td>planned</td><td>planned</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-4">Contract matrix</h2>
+        <p class="text-sm text-slate-500 mb-4">Rows show the unit, columns show the main interfaces defined by the design package.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm data-table">
+            <thead>
+              <tr class="border-b border-stone-200 text-left">
+                <th>Unit</th><th>Consumer</th><th>Input</th><th>Output</th><th>Failure</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono">catalog-query-designer</span></td><td><span class="chip chip-neutral">defined</span><div class="text-xs text-slate-500 mt-1">Catalog search API is the primary consumer.</div></td><td><span class="chip chip-neutral">typed</span><div class="text-xs text-slate-500 mt-1">Input shape is fixed in the design package.</div></td><td><span class="chip chip-neutral">typed</span><div class="text-xs text-slate-500 mt-1">Success and empty paths are specified.</div></td><td><span class="chip chip-neutral">typed</span><div class="text-xs text-slate-500 mt-1">Degraded contract is explicit and retry-aware.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel rounded-3xl p-6">
+        <h2 class="text-lg font-bold mb-3">Implementation phases</h2>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Phase 1. Contracts</div><p class="text-slate-600 mt-1">Freeze consumer-facing schemas and parser expectations.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Phase 2. Runtime</div><p class="text-slate-600 mt-1">Implement schema lookup, validation, and bounded retries.</p></div>
+<div class="rounded-2xl border border-stone-200 p-4"><div class="font-semibold">Phase 3. Eval and ops</div><p class="text-slate-600 mt-1">Add scenario regressions, tracing, and alerting.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, curve: 'basis' } });
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+      document.getElementById('view-' + name).classList.remove('hidden');
+      document.querySelectorAll('[id^="btn-"]').forEach(b => {
+        b.classList.remove('tab-active');
+        b.classList.add('tab-inactive');
+      });
+      const btn = document.getElementById('btn-' + name);
+      btn.classList.remove('tab-inactive');
+      btn.classList.add('tab-active');
+      if (name === 'overview') {
+        mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+      }
+    }
+  </script>
+</body>
+</html>

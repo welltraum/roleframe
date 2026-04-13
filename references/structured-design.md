@@ -1,28 +1,23 @@
 # Structured design package
 
-## Quick map
-
-- Canonical files
-- Required schema
-- Field budgets
-- Design intent
-
 ## Canonical source of truth
 
-RoleFrame design is **JSON-first**.
+RoleFrame design is JSON-first.
 
-The canonical design package contains:
+Canonical files:
 
-- `docs/agent_design/NN_name.design.json`
-- `docs/agent_design/summary.design.json`
+- `docs/roleframe/design/NN_name.design.json`
+- `docs/roleframe/design/summary.design.json`
 
 Derived views:
 
-- `docs/agent_design/NN_name.md`
-- `docs/agent_design/README.md`
-- `docs/agent_design/dashboard.html`
+- `docs/roleframe/design/NN_name.md`
+- `docs/roleframe/design/README.md`
+- `docs/roleframe/design/dashboard.html`
 
-Markdown and HTML are rendered views. They are not the source of truth.
+Legacy `docs/agent_design/*` is compatibility-only.
+
+If a project-local profile remaps output placement, it must preserve this schema and treat the mapped files as a projection of the same design package.
 
 ## Required schema for `NN_name.design.json`
 
@@ -34,6 +29,7 @@ Top-level keys:
 - `idef0`
 - `control_spec`
 - `mechanism_spec`
+- `governance`
 - `contracts`
 - `dependencies`
 - `evaluation_plan`
@@ -41,31 +37,25 @@ Top-level keys:
 
 ### `metadata`
 
-Required fields:
+Required:
 
 - `name`
+- `unit_kind`
 - `language`
 - `source_context`
 - `designed_at`
 
-### `summary`
-
-Required fields:
-
-- `readiness_score`
-- `readiness_level`
-- `verdict`
-- `primary_risk`
-
-Rules:
-
-- `readiness_score` is `0..100`
-- `verdict` stays compact, 2-4 sentences
-- `primary_risk` is one engineering sentence
+`unit_kind` must be `agent`, `pack`, or `workflow`.
 
 ### `business_function`
 
-Required fields:
+Keep the key name for compatibility, but interpret it by profile:
+
+- `agent`: business function boundary
+- `pack`: ownership boundary
+- `workflow`: orchestration boundary
+
+Required:
 
 - `goal`
 - `consumer`
@@ -73,97 +63,28 @@ Required fields:
 - `in_scope`
 - `out_of_scope`
 
-Rules:
+### `governance`
 
-- `goal` is one concrete business function sentence
-- `success_criteria`, `in_scope`, `out_of_scope` are non-empty lists
+Required:
 
-### `idef0`
+- `owner_boundary`
+- `routes`
+- `owned_surfaces`
+- `proof_surfaces`
+- `deployment_visibility`
+- `rollout`
+- `preparedness`
 
-Required fields:
-
-- `input`
-- `control`
-- `mechanism`
-- `output`
-
-### `control_spec`
-
-Required fields:
-
-- `role`
-- `sop`
-- `constraints`
-
-Rules:
-
-- `sop` is an ordered non-empty list
-- `constraints` is a non-empty list
-
-### `mechanism_spec`
-
-Required fields:
-
-- `tools`
-- `memory_strategy`
-- `runtime_loop`
-- `error_handling`
-
-Rules:
-
-- `tools` is a non-empty list of objects with `name`, `purpose`, `failure_mode`
-
-### `contracts`
-
-Required fields:
-
-- `consumer`
-- `input_contract`
-- `output_contract`
-- `failure_contract`
-
-Rules:
-
-- contracts should be compact enough for dashboard code blocks
-- prefer pseudo-JSON or strict text templates over prose
-
-### `dependencies`
-
-Must contain one or more items with:
+`routes` is a non-empty list of objects with:
 
 - `name`
-- `type`
-- `reason`
+- `consumer`
+- `contract`
 - `risk`
-
-### `evaluation_plan`
-
-Required fields:
-
-- `scenarios`
-- `metrics`
-- `regression`
-
-Rules:
-
-- all fields are non-empty lists
-
-### `delivery_plan`
-
-Required fields:
-
-- `phases`
-- `observability`
-- `change_management`
-
-Rules:
-
-- `phases` is a non-empty list of objects with `title`, `description`
-- `observability` and `change_management` are non-empty lists
 
 ## Required schema for `summary.design.json`
 
-Required top-level keys:
+Required keys:
 
 - `language`
 - `title`
@@ -176,33 +97,27 @@ Required top-level keys:
 - `implementation_phases`
 - `agents_lead`
 
-Optional but recommended:
-
-- `methodology`
+The key `agents_lead` is still accepted for compatibility, but the visible text should talk about units.
 
 ## Field budgets
 
 | Field | Budget |
 |---|---|
 | `summary.verdict` | 2-4 sentences |
-| `idef0.*` | 1-2 sentences each |
+| `idef0.*` | 1-2 sentences |
 | `control_spec.sop` | 3-7 steps |
-| `mechanism_spec.tools` | 1-6 rows |
+| `governance.routes` | 1-6 rows |
 | `dependencies` | 1-6 rows |
-| `evaluation_plan.*` | 2-6 rows |
-| `delivery_plan.phases` | 2-5 phases |
-| `critical_risks` | 3-5 items |
-| `overview_cards` | 3-4 cards |
+| `implementation_phases` | 2-5 rows |
 
 ## Design intent
 
-The LLM fills only the semantic design layer:
+The LLM fills semantics only:
 
-- business boundary
-- Control vs Mechanism split
-- typed contracts
-- dependencies
-- evaluation plan
-- delivery phases
+- boundary
+- Control vs Mechanism
+- governance
+- contracts
+- eval and delivery
 
-The renderer handles markdown and HTML composition.
+The renderer handles markdown and dashboard composition.

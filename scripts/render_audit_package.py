@@ -47,7 +47,9 @@ SUMMARY_REQUIRED = {
 AGENT_REQUIRED = {
     "metadata",
     "summary",
+    "artifact_inventory",
     "idef0",
+    "governance",
     "criteria",
     "evidence_points",
     "contracts",
@@ -92,13 +94,13 @@ def level_from_score(score: int, language: str) -> str:
         "ru": [
             (10, "Эксперимент"),
             (20, "Рабочий прототип"),
-            (25, "Управляемый агент"),
+            (25, "Управляемый unit"),
             (30, "Зрелый компонент"),
         ],
         "en": [
             (10, "Experiment"),
             (20, "Working prototype"),
-            (25, "Managed agent"),
+            (25, "Managed unit"),
             (30, "Mature component"),
         ],
     }
@@ -110,6 +112,24 @@ def level_from_score(score: int, language: str) -> str:
 
 def criterion_labels(language: str) -> dict[str, str]:
     return {key: value.get(language, value["en"]) for key, value in CRITERIA_ORDER}
+
+
+def unit_noun(language: str, plural: bool = False) -> str:
+    labels = {
+        "ru": ("единица", "единицы"),
+        "en": ("unit", "units"),
+    }
+    singular, plural_label = labels.get(language, labels["en"])
+    return plural_label if plural else singular
+
+
+def unit_kind_label(unit_kind: str, language: str) -> str:
+    labels = {
+        "agent": {"ru": "profile: agent", "en": "profile: agent"},
+        "pack": {"ru": "profile: pack", "en": "profile: pack"},
+        "workflow": {"ru": "profile: workflow", "en": "profile: workflow"},
+    }
+    return labels.get(unit_kind, labels["agent"]).get(language, unit_kind)
 
 
 def ensure(condition: bool, message: str) -> None:
@@ -131,6 +151,7 @@ def validate_agent_audit(path: Path, payload: dict) -> None:
 
     metadata = payload["metadata"]
     ensure(isinstance(metadata.get("name"), str) and metadata["name"], f"{path.name}: metadata.name is required")
+    ensure(metadata.get("unit_kind") in {"agent", "pack", "workflow"}, f"{path.name}: metadata.unit_kind must be agent, pack, or workflow")
     ensure(isinstance(metadata.get("language"), str) and metadata["language"], f"{path.name}: metadata.language is required")
     ensure(isinstance(metadata.get("source_files"), list) and metadata["source_files"], f"{path.name}: metadata.source_files must be a non-empty list")
     ensure(isinstance(metadata.get("reviewed_at"), str) and metadata["reviewed_at"], f"{path.name}: metadata.reviewed_at is required")
@@ -162,11 +183,29 @@ def validate_agent_audit(path: Path, payload: dict) -> None:
         total_score += item["score"]
     ensure(total_score == summary["total_score"], f"{path.name}: summary.total_score must equal the sum of criteria")
 
+    artifact_inventory = payload["artifact_inventory"]
+    ensure(isinstance(artifact_inventory, list) and 3 <= len(artifact_inventory) <= 10, f"{path.name}: artifact_inventory must contain 3..10 items")
+    valid_types = {"prompt", "manifest", "route", "runtime", "test", "proof_surface", "doc"}
+    for item in artifact_inventory:
+        ensure(item.get("type") in valid_types, f"{path.name}: artifact_inventory.type must be one of {sorted(valid_types)}")
+        for field in ["path", "role"]:
+            ensure(isinstance(item.get(field), str) and item[field], f"{path.name}: artifact_inventory.{field} is required")
+
     evidence_points = payload["evidence_points"]
     ensure(isinstance(evidence_points, list) and 3 <= len(evidence_points) <= 5, f"{path.name}: evidence_points must contain 3..5 items")
     for item in evidence_points:
         for field in ["layer", "source", "claim"]:
             ensure(isinstance(item.get(field), str) and item[field], f"{path.name}: evidence point {field} is required")
+
+    governance = payload["governance"]
+    ensure(isinstance(governance.get("owner_boundary"), str) and governance["owner_boundary"], f"{path.name}: governance.owner_boundary is required")
+    for field in ["proof_surfaces", "deployment_visibility", "rollout", "preparedness"]:
+        value = governance.get(field)
+        ensure(isinstance(value, list) and value, f"{path.name}: governance.{field} must be a non-empty list")
+    ensure(isinstance(governance.get("route_matrix"), list) and governance["route_matrix"], f"{path.name}: governance.route_matrix must be a non-empty list")
+    for item in governance["route_matrix"]:
+        for field in ["source", "target", "status", "note"]:
+            ensure(isinstance(item.get(field), str) and item[field], f"{path.name}: governance.route_matrix.{field} is required")
 
     contracts = payload["contracts"]
     for field in ["consumer", "current_contract", "target_contract"]:
@@ -298,7 +337,7 @@ def derive_summary(agents: list[dict], language: str) -> dict:
 
     return {
         "language": language,
-        "title": "Dashboard аудита агентов" if language == "ru" else "Agent audit dashboard",
+        "title": "Dashboard аудита units" if language == "ru" else "Unit audit dashboard",
         "subtitle": "Рендер из structured audit package" if language == "ru" else "Rendered from the structured audit package",
         "overall_verdict": (
             "Пакет показывает управляемую схему review: подробность теперь живёт в JSON и детерминированном рендере, а не в дублировании prose."
@@ -310,9 +349,9 @@ def derive_summary(agents: list[dict], language: str) -> dict:
                 "title": "Общий вердикт" if language == "ru" else "Overall verdict",
                 "value": level_from_score(round(avg_score), language),
                 "description": (
-                    "Дашборд собирается детерминированно из structured audit package."
+                    "Дашборд собирается детерминированно из structured audit package и не является source of truth."
                     if language == "ru"
-                    else "The dashboard is rendered deterministically from the structured audit package."
+                    else "The dashboard is rendered deterministically from the structured audit package and is not the source of truth."
                 ),
             },
             {
@@ -325,21 +364,21 @@ def derive_summary(agents: list[dict], language: str) -> dict:
                 ),
             },
             {
-                "title": "Агентов" if language == "ru" else "Agents",
+                "title": "Units" if language == "ru" else "Units",
                 "value": str(len(agents)),
                 "description": (
-                    "Каждая карточка опирается на evidence, criteria, contracts и backlog."
+                    "Каждая карточка опирается на artifact inventory, governance, evidence и contracts."
                     if language == "ru"
-                    else "Each card is backed by evidence, criteria, contracts, and backlog."
+                    else "Each card is backed by artifact inventory, governance, evidence, and contracts."
                 ),
             },
             {
                 "title": "Главный риск" if language == "ru" else "Top risk",
                 "value": html.escape(worst["summary"]["top_deficit"]) if worst else "-",
                 "description": (
-                    "Самый слабый агент определяет системный приоритет исправлений."
+                    "Самый слабый unit определяет системный приоритет исправлений."
                     if language == "ru"
-                    else "The weakest agent defines the first system-level fix."
+                    else "The weakest unit defines the first system-level fix."
                 ),
             },
         ],
@@ -355,7 +394,7 @@ def derive_summary(agents: list[dict], language: str) -> dict:
                 if language == "ru"
                 else "The diagram is derived from the structured audit package and highlights only the riskiest links."
             ),
-            "mermaid": "flowchart LR\n    A[\"Input\"] --> B[\"Agent review package\"] --> C[\"Dashboard\"]",
+            "mermaid": "flowchart LR\n    A[\"Artifacts\"] --> B[\"Structured review package\"] --> C[\"Derived dashboard\"]",
         },
         "critical_issues": [
             (
@@ -402,16 +441,16 @@ def derive_summary(agents: list[dict], language: str) -> dict:
             {
                 "title": "Фаза 3. Eval и observability" if language == "ru" else "Phase 3. Eval and observability",
                 "description": (
-                    "Добавить agent-level regression и продуктовые сигналы."
-                    if language == "ru"
-                    else "Add agent-level regression and operational signals."
+                "Добавить unit-level regression и продуктовые сигналы."
+                if language == "ru"
+                    else "Add unit-level regression and operational signals."
                 ),
             },
         ],
         "agents_lead": (
-            "Карточки ниже должны быть полезны без открытия markdown-файла: в них уже есть IDEF0, evidence, criteria, contracts и backlog."
+            "Карточки ниже должны быть полезны без открытия markdown-файла: в них уже есть artifact inventory, IDEF0, governance, evidence, criteria, contracts и backlog."
             if language == "ru"
-            else "The cards below should be useful without opening the markdown file: they already include IDEF0, evidence, criteria, contracts, and backlog."
+            else "The cards below should be useful without opening the markdown file: they already include artifact inventory, IDEF0, governance, evidence, criteria, contracts, and backlog."
         ),
     }
 
@@ -449,7 +488,7 @@ def render_markdown_agent(agent: dict) -> str:
     language = agent["metadata"]["language"]
     source_label = "исходный артефакт" if language == "ru" else "source artifact"
     name = agent["metadata"]["name"]
-    lines.append(f"# Аудит: агент `{name}`" if language == "ru" else f"# Audit: agent `{name}`")
+    lines.append(f"# Аудит: unit `{name}`" if language == "ru" else f"# Audit: unit `{name}`")
     lines.append("")
     lines.append("## Источники" if language == "ru" else "## Sources")
     lines.append("")
@@ -458,17 +497,49 @@ def render_markdown_agent(agent: dict) -> str:
     for source in agent["metadata"]["source_files"]:
         lines.append(f"| `{source}` | {source_label} |")
     lines.append("")
+    lines.append("## Профиль" if language == "ru" else "## Profile")
+    lines.append("")
+    lines.append(f"`{unit_kind_label(agent['metadata']['unit_kind'], language)}`")
+    lines.append("")
     lines.append("## Вердикт" if language == "ru" else "## Verdict")
     lines.append("")
     lines.append(f"Итоговый балл: **{agent['summary']['total_score']}/30**" if language == "ru" else f"Total score: **{agent['summary']['total_score']}/30**")
     lines.append("")
     lines.append(agent["summary"]["verdict"])
     lines.append("")
+    lines.append("## Карта артефактов" if language == "ru" else "## Artifact inventory")
+    lines.append("")
+    lines.append("| Тип | Файл | Роль |" if language == "ru" else "| Type | Path | Role |")
+    lines.append("|---|---|---|")
+    for item in agent["artifact_inventory"]:
+        lines.append(f"| `{item['type']}` | `{item['path']}` | {item['role']} |")
+    lines.append("")
     lines.append("## IDEF0")
     lines.append("")
     for quadrant in ["input", "control", "mechanism", "output"]:
         lines.append(f"- **{quadrant.title()}**: {agent['idef0'][quadrant]}")
     lines.append("")
+    lines.append("## Governance" if language == "en" else "## Governance")
+    lines.append("")
+    lines.append(f"- **{'Owner boundary' if language == 'en' else 'Owner boundary'}**: {agent['governance']['owner_boundary']}")
+    lines.append("")
+    lines.append("### Route matrix")
+    lines.append("")
+    lines.append("| Source | Target | Status | Note |")
+    lines.append("|---|---|---|---|")
+    for item in agent["governance"]["route_matrix"]:
+        lines.append(f"| `{item['source']}` | `{item['target']}` | {item['status']} | {item['note']} |")
+    lines.append("")
+    for field, label in [
+        ("proof_surfaces", "Proof surfaces" if language == "en" else "Proof surfaces"),
+        ("deployment_visibility", "Deployment visibility" if language == "en" else "Deployment visibility"),
+        ("rollout", "Rollout" if language == "en" else "Rollout"),
+        ("preparedness", "Preparedness" if language == "en" else "Preparedness"),
+    ]:
+        lines.append(f"### {label}")
+        lines.append("")
+        lines.extend(f"- {entry}" for entry in agent["governance"][field])
+        lines.append("")
     lines.append("## Критерии зрелости" if language == "ru" else "## Maturity criteria")
     lines.append("")
     lines.append("| Критерий | Балл | Обоснование | Доказательства |" if language == "ru" else "| Criterion | Score | Rationale | Evidence |")
@@ -531,7 +602,7 @@ def render_markdown_agent(agent: dict) -> str:
 def render_markdown_summary(agents: list[dict], summary: dict) -> str:
     language = summary["language"]
     lines = [
-        "# Аудит агентов (методология RoleFrame)" if language == "ru" else "# Agent audit (RoleFrame methodology)",
+        "# Аудит units (методология RoleFrame)" if language == "ru" else "# Unit audit (RoleFrame methodology)",
         "",
         f"Основание: {summary['overall_verdict']}" if language == "ru" else f"Basis: {summary['overall_verdict']}",
         "",
@@ -545,9 +616,9 @@ def render_markdown_summary(agents: list[dict], summary: dict) -> str:
             "",
             "## Сводка" if language == "ru" else "## Summary",
             "",
-            "| Агент | Балл | Уровень | Главный разрыв | Первое действие |"
+            "| Unit | Балл | Уровень | Главный разрыв | Первое действие |"
             if language == "ru"
-            else "| Agent | Score | Level | Main gap | First action |",
+            else "| Unit | Score | Level | Main gap | First action |",
             "|---|---:|---|---|---|",
         ]
     )
@@ -558,7 +629,7 @@ def render_markdown_summary(agents: list[dict], summary: dict) -> str:
     lines.extend(
         [
             "",
-            "## Межагентные находки" if language == "ru" else "## Cross-agent findings",
+            "## Между units" if language == "ru" else "## Cross-unit findings",
             "",
         ]
     )
@@ -617,15 +688,15 @@ def render_methodology_blocks(summary: dict) -> str:
         {
             "title": "Что проверяется" if summary["language"] == "ru" else "What gets reviewed",
             "items": [
-                "граница функции и typed contracts" if summary["language"] == "ru" else "function boundary and typed contracts",
+                "boundary, typed contracts и governance" if summary["language"] == "ru" else "boundary, typed contracts, and governance",
                 "разделение Control и Mechanism" if summary["language"] == "ru" else "control vs mechanism split",
-                "наличие eval и observability" if summary["language"] == "ru" else "evaluation and observability coverage",
+                "proof surfaces, eval и observability" if summary["language"] == "ru" else "proof surfaces, evaluation, and observability",
             ],
         },
         {
             "title": "Как читать пакет" if summary["language"] == "ru" else "How to read the package",
             "items": [
-                "сначала overview, затем agent cards, затем markdown audit" if summary["language"] == "ru" else "start with the overview, then agent cards, then the markdown audit",
+                "сначала overview, затем unit cards, затем markdown audit" if summary["language"] == "ru" else "start with the overview, then unit cards, then the markdown audit",
                 "использовать dashboard для pattern-level анализа" if summary["language"] == "ru" else "use the dashboard for pattern-level analysis",
                 "идти в markdown при подготовке patch plan" if summary["language"] == "ru" else "open markdown when preparing a patch plan",
             ],
@@ -696,19 +767,47 @@ def render_agent_card(agent: dict, output_dir: Path) -> str:
             for item in agent["patch_plan"]
         ]
     )
+    inventory_rows = "\n".join(
+        [
+            "<tr>"
+            f"<td><span class=\"mono\">{html.escape(item['type'])}</span></td>"
+            f"<td><span class=\"mono\">{html.escape(item['path'])}</span></td>"
+            f"<td>{html.escape(item['role'])}</td>"
+            "</tr>"
+            for item in agent["artifact_inventory"]
+        ]
+    )
+    governance_rows = "\n".join(
+        [
+            "<tr>"
+            f"<td><span class=\"mono\">{html.escape(item['source'])}</span></td>"
+            f"<td><span class=\"mono\">{html.escape(item['target'])}</span></td>"
+            f"<td><span class=\"chip chip-neutral\">{html.escape(item['status'])}</span></td>"
+            f"<td>{html.escape(item['note'])}</td>"
+            "</tr>"
+            for item in agent["governance"]["route_matrix"]
+        ]
+    )
 
     return (
-        f'<article class="panel rounded-3xl p-6 space-y-5" data-agent-card="{html.escape(agent["metadata"]["name"])}">'
+        f'<article class="panel rounded-3xl p-6 space-y-5" data-unit-card="{html.escape(agent["metadata"]["name"])}">'
         '<div class="flex flex-wrap items-center justify-between gap-3">'
         f'<div><h2 class="text-xl font-bold">{html.escape(agent["metadata"]["name"])}</h2>'
         f'<p class="text-sm text-slate-500">{html.escape(agent["summary"]["top_deficit"])}</p></div>'
         f'<div class="flex items-center gap-2"><span class="{badge_class} rounded-full px-3 py-1 text-sm font-bold">{agent["summary"]["total_score"]}/30</span>'
-        f'<span class="chip {chip_class}">{html.escape(agent["summary"]["maturity_level"])}</span></div>'
+        f'<span class="chip {chip_class}">{html.escape(agent["summary"]["maturity_level"])}</span>'
+        f'<span class="chip chip-neutral">{html.escape(unit_kind_label(agent["metadata"]["unit_kind"], language))}</span></div>'
         "</div>"
         f'<div class="flex flex-wrap gap-2" data-block="sources">{"".join(sources)}</div>'
         '<div class="rounded-2xl bg-stone-50 border border-stone-200 p-4" data-block="verdict">'
         f'<div class="font-semibold mb-2">{"Краткий вердикт" if language == "ru" else "Short verdict"}</div>'
         f'<p class="text-sm">{html.escape(agent["summary"]["verdict"])}</p>'
+        "</div>"
+        '<div class="rounded-2xl border border-stone-200 p-4" data-block="artifact-inventory">'
+        f'<div class="font-semibold mb-3">{"Карта артефактов" if language == "ru" else "Artifact inventory"}</div>'
+        '<div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr>'
+        f'<th>{"Тип" if language == "ru" else "Type"}</th><th>{"Файл" if language == "ru" else "Path"}</th><th>{"Роль" if language == "ru" else "Role"}</th>'
+        f"</tr></thead><tbody>{inventory_rows}</tbody></table></div>"
         "</div>"
         '<div class="rounded-2xl border border-stone-200 p-4" data-block="idef0">'
         f'<div class="font-semibold mb-3">IDEF0</div>'
@@ -716,6 +815,19 @@ def render_agent_card(agent: dict, output_dir: Path) -> str:
         f'<div><strong>Control:</strong> {html.escape(agent["idef0"]["control"])}</div>'
         f'<div><strong>Mechanism:</strong> {html.escape(agent["idef0"]["mechanism"])}</div>'
         f'<div><strong>Output:</strong> {html.escape(agent["idef0"]["output"])}</div></div>'
+        "</div>"
+        '<div class="rounded-2xl border border-stone-200 p-4" data-block="governance">'
+        f'<div class="font-semibold mb-3">{"Governance"}</div>'
+        f'<div class="text-sm mb-3"><strong>{"Owner boundary"}:</strong> {html.escape(agent["governance"]["owner_boundary"])}</div>'
+        '<div class="overflow-x-auto"><table class="w-full text-sm data-table"><thead><tr>'
+        '<th>Source</th><th>Target</th><th>Status</th><th>Note</th>'
+        f"</tr></thead><tbody>{governance_rows}</tbody></table></div>"
+        f'<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4 text-sm">'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Proof surfaces"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["proof_surfaces"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Deployment visibility"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["deployment_visibility"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Rollout"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["rollout"])}</ul></div>'
+        f'<div><div class="text-xs uppercase tracking-[0.14em] text-slate-400 mb-2">{"Preparedness"}</div><ul class="list-disc pl-5 space-y-1">{html_list_items(agent["governance"]["preparedness"])}</ul></div>'
+        "</div>"
         "</div>"
         '<div class="rounded-2xl border border-stone-200 p-4" data-block="evidence">'
         f'<div class="font-semibold mb-3">{"Ключевые точки доказательства" if language == "ru" else "Key evidence points"}</div>'
@@ -768,7 +880,7 @@ def render_maturity_matrix(summary: dict) -> tuple[str, str]:
         rows.append(f"<tr><td><span class=\"mono\">{html.escape(row['agent'])}</span></td>{values}</tr>")
     columns = summary["maturity_matrix"]["columns"]
     header_labels = {
-        "agent": "Агент" if language == "ru" else "Agent",
+        "agent": "Unit",
         "boundary": "Граница" if language == "ru" else "Boundary",
         "control": "Control",
         "mechanism": "Mechanism",
@@ -782,7 +894,7 @@ def render_maturity_matrix(summary: dict) -> tuple[str, str]:
 
 def render_contract_matrix(summary: dict) -> tuple[str, str]:
     columns = summary["contract_matrix"]["columns"]
-    header = "<th>Источник</th>" if summary["language"] == "ru" else "<th>Source</th>"
+    header = "<th>Source unit</th>" if summary["language"] == "en" else "<th>Source unit</th>"
     header += "".join(f"<th>{html.escape(column)}</th>" for column in columns)
     rows = []
     for row in summary["contract_matrix"]["rows"]:
@@ -819,7 +931,7 @@ def render_dashboard(agents: list[dict], summary: dict, output_dir: Path) -> str
         "{{SUBTITLE}}": html.escape(summary["subtitle"]),
         "{{TAB_OVERVIEW}}": "Обзор" if language == "ru" else "Overview",
         "{{TAB_METHODOLOGY}}": "Методика" if language == "ru" else "Methodology",
-        "{{TAB_AGENTS}}": "Агенты" if language == "ru" else "Agents",
+        "{{TAB_AGENTS}}": "Units" if language == "ru" else "Units",
         "{{TAB_ISSUES}}": "Проблемы и план" if language == "ru" else "Issues and roadmap",
         "{{OVERVIEW_SUMMARY_CARDS}}": render_overview_cards(summary),
         "{{ARCHITECTURE_HEADING}}": html.escape(summary["architecture"]["heading"]),

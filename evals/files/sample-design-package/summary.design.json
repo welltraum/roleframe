@@ -1,13 +1,13 @@
 {
   "language": "en",
-  "title": "Agent design dashboard",
+  "title": "Unit design dashboard",
   "subtitle": "Rendered from the structured design package",
   "overall_verdict": "The package shows an implementation-ready design with a clear control/mechanism split. The main remaining work is operational hardening and regression coverage.",
   "overview_cards": [
     {
-      "title": "System shape",
-      "value": "Single agent",
-      "description": "The business boundary is narrow enough to avoid premature decomposition."
+      "title": "Profile mix",
+      "value": "Agent profile",
+      "description": "The boundary is narrow enough to stay a single unit without premature decomposition."
     },
     {
       "title": "Readiness",
@@ -22,7 +22,7 @@
   ],
   "architecture": {
     "heading": "Solution map",
-    "text": "The agent normalizes requests into typed catalog queries and hands the payload to the search API.",
+    "text": "The unit normalizes requests into typed catalog queries and hands the payload to the search API.",
     "mermaid": "flowchart LR\n    U[\"User request\"] --> A[\"Catalog query planner\"] --> S[\"Catalog search API\"]"
   },
   "critical_risks": [
@@ -75,5 +75,5 @@
       "description": "Add scenario regressions, tracing, and alerting."
     }
   ],
-  "agents_lead": "The cards below should be enough to start implementation without going back to a prose-only design document."
+  "agents_lead": "The cards below should be enough to start implementation without going back to a prose-only design document. Each card carries boundary, governance, contracts, and rollout context."
 }

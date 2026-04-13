@@ -1,0 +1,27 @@
+{
+  "name": "product-skills-pack",
+  "profile": "pack",
+  "invocation": "explicit-only",
+  "surface_modes": ["hidden", "review-only"],
+  "owned_surfaces": [
+    "packs/product-skills",
+    "routes/intake-donor-skill.route.json"
+  ],
+  "rollout": {
+    "stage": "internal",
+    "wave": "0",
+    "gates": ["contract_checks", "proof_review"]
+  },
+  "preparedness": {
+    "contracts": "partial",
+    "proof_surfaces": [
+      "tests/contract-checks.md",
+      "proofs/intake-proof.md"
+    ]
+  },
+  "visibility": {
+    "deployed": true,
+    "visible": false,
+    "owned_by": "product-skills-pack"
+  }
+}
